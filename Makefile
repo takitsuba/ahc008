@@ -4,8 +4,8 @@ lint:
 
 .PHONY: test
 test:
-	poetry run python local_test.py 10
+	poetry run python local_test.py --count 10
 
 .PHONY: test_all
 test_all:
-	poetry run python local_test.py 1000
+	poetry run python local_test.py --count 1000 --disable_tqdm
