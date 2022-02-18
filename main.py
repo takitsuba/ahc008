@@ -146,7 +146,19 @@ for row in floor.tiles:
     assert len(row) == FLOOR_LEN + MARGIN * 2
 
 
-# def solve_route(start: Point, end: Point):
+# def solve_route(start: Point, goal: Point):
+#     def dfs(start, target, path, visited = set()):
+#         path.append(start)
+#         visited.add(start)
+#         if start == goal:
+#             return path
+#         for neighbour in adj_list[start]:
+#             if neighbour not in visited:
+#                 result = dfs(adj_list, neighbour, target, path, visited)
+#                 if result is not None:
+#                     return result
+#         path.pop()
+#         return None
 
 
 class PartitionCands(Floor):
@@ -456,4 +468,5 @@ def main():
                 pet.move(action_char)
 
 
-main()
+if __name__ == "__main__":
+    main()
