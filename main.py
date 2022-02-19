@@ -109,6 +109,15 @@ class Floor:
         #     for col in range(MARGIN, MARGIN + DANGER_CORNER_WIDTH):
         #         self.tiles[row][col] = Tile.DANGER
 
+    def __repr__(self):
+        tiles_txt = ""
+        for row in self.tiles:
+            row_txt = ""
+            for tile in row:
+                row_txt += str(tile.value)
+            tiles_txt += row_txt + "\n"
+        return tiles_txt
+
     def get_tile(self, point: Point):
         row = point.x
         col = point.y
@@ -140,6 +149,7 @@ class Floor:
         return cnt
 
 
+# CAUTION: update_tile dangerでエラーにならないように、MARGINは 2以上である必要。
 floor = Floor(FLOOR_LEN, MARGIN)
 assert len(floor.tiles) == FLOOR_LEN + MARGIN * 2
 for row in floor.tiles:
