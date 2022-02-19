@@ -20,7 +20,11 @@ def local_test(test_cnt, disable_tqdm):
 
     with Pool(processes=4) as p:
         scores = list(
-            tqdm(p.imap(func=test_once, iterable=file_num_list), total=test_cnt, disable=disable_tqdm)
+            tqdm(
+                p.imap(func=test_once, iterable=file_num_list),
+                total=test_cnt,
+                disable=disable_tqdm,
+            )
         )
 
     print(f"mean score: {sum(scores) / len(scores)}")
@@ -28,8 +32,8 @@ def local_test(test_cnt, disable_tqdm):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--count', default=10)
-    parser.add_argument('--disable_tqdm', action="store_true")
+    parser.add_argument("--count", default=10)
+    parser.add_argument("--disable_tqdm", action="store_true")
 
     args = parser.parse_args()
 
