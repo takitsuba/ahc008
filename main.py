@@ -86,22 +86,22 @@ class Tile(Enum):
 
 
 class Floor:
-    def __init__(self, margin):
+    def __init__(self, floor_len, margin):
         self.tiles: List[List[Tile]] = []
 
         # 上5行
         for _ in range(margin):
-            row = [Tile.WALL] * (FLOOR_LEN + margin * 2)
+            row = [Tile.WALL] * (floor_len + margin * 2)
             self.tiles.append(row)
 
         # 真ん中30行
-        for _ in range(FLOOR_LEN):
-            row = [Tile.WALL] * margin + [Tile.EMPTY] * FLOOR_LEN + [Tile.WALL] * margin
+        for _ in range(floor_len):
+            row = [Tile.WALL] * margin + [Tile.EMPTY] * floor_len + [Tile.WALL] * margin
             self.tiles.append(row)
 
         # 下5行
         for _ in range(margin):
-            row = [Tile.WALL] * (FLOOR_LEN + margin * 2)
+            row = [Tile.WALL] * (floor_len + margin * 2)
             self.tiles.append(row)
 
         # 角はDANGER
@@ -140,7 +140,7 @@ class Floor:
         return cnt
 
 
-floor = Floor(MARGIN)
+floor = Floor(FLOOR_LEN, MARGIN)
 assert len(floor.tiles) == FLOOR_LEN + MARGIN * 2
 for row in floor.tiles:
     assert len(row) == FLOOR_LEN + MARGIN * 2
