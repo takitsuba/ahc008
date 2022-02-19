@@ -9,3 +9,7 @@ test:
 .PHONY: test_all
 test_all:
 	poetry run python local_test.py --count 1000 --disable_tqdm
+
+.PHONY: jupyter
+jupyter:
+	poetry run jupyter lab
