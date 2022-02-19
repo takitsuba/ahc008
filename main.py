@@ -4,6 +4,7 @@ from shutil import move
 from typing import List, Union, Optional, Dict
 from enum import Enum
 import random
+import copy
 from collections import OrderedDict
 
 random.seed(11)
@@ -156,19 +157,65 @@ for row in floor.tiles:
     assert len(row) == FLOOR_LEN + MARGIN * 2
 
 
-# def solve_route(start: Point, goal: Point):
-#     def dfs(start, target, path, visited = set()):
-#         path.append(start)
-#         visited.add(start)
-#         if start == goal:
-#             return path
-#         for neighbour in adj_list[start]:
-#             if neighbour not in visited:
-#                 result = dfs(adj_list, neighbour, target, path, visited)
-#                 if result is not None:
-#                     return result
-#         path.pop()
-#         return None
+class Steps(dict):
+    def __init__(self, U=0, D=0, L=0, R=0, *arg, **kw):
+        super(Steps, self).__init__(*arg, **kw)
+        self["U"] = U
+        self["D"] = D
+        self["L"] = L
+        self["R"] = R
+
+    def __repr__(self):
+        return f"({self['U']}, {self['D']}, {self['L']}, {self['R']})"
+
+
+def solve_route(start, goal, floor) -> List[Point]:
+    """startからgoalまでの経路のPointのListを返す
+    経路長は最短であることを前提とする。
+    経路が見つからなければ空のListを返す。
+
+    TODO: 経路長が最短でない場合
+    """
+
+    def cal_steps(start, goal):
+        diff = goal - start
+        steps = Steps()
+        # 上下
+        if diff.x > 0:
+            steps["D"] = diff.x
+        else:
+            # 正の数にする
+            steps["U"] = -diff.x
+
+        # 左右
+        if diff.y > 0:
+            steps["R"] = diff.y
+        else:
+            steps["L"] = -diff.y
+
+        return steps
+
+    def dfs(start, goal, steps) -> List[Point]:
+        if start == goal:
+            return [goal]
+
+        for step_dir, step_cnt in steps.items():
+            if step_cnt == 0:
+                continue
+
+            diff = move_char_to_diff[step_dir]
+            next_point = start + diff
+
+            if floor.get_tile(next_point) not in [Tile.WALL, Tile.PARTITION]:
+                next_steps = copy.deepcopy(steps)
+                next_steps[step_dir] -= 1
+                result = dfs(next_point, goal, next_steps)
+                if len(result) > 0:
+                    return [start] + result
+        return []
+
+    steps = cal_steps(start, goal)
+    return dfs(start, goal, steps)
 
 
 class PartitionCands(Floor):
@@ -317,14 +364,23 @@ class Human:
         else:
             # 4より大きい場合
             # 近づく
-            if random.randint(0, distance) < abs(diff_to_target.x):
-                directions += [
-                    PointDiff(1 if diff_to_target.x > 0 else -1, 0)
-                ] + neighbour_diffs
-            else:
-                directions += [
-                    PointDiff(0, 1 if diff_to_target.y > 0 else -1)
-                ] + neighbour_diffs
+            path = solve_route(self.point, self.target.point, floor)  # type: ignore
+            if len(path) >= 2:
+                next_point = path[1]
+                direction = next_point - self.point
+                print(f"# {next_point}, {self.point}, {direction}")
+                directions += [direction]
+
+            directions += neighbour_diffs
+
+            # if random.randint(0, distance) < abs(diff_to_target.x):
+            #     directions += [
+            #         PointDiff(1 if diff_to_target.x > 0 else -1, 0)
+            #     ] + neighbour_diffs
+            # else:
+            #     directions += [
+            #         PointDiff(0, 1 if diff_to_target.y > 0 else -1)
+            #     ] + neighbour_diffs
 
         return directions
 
@@ -458,10 +514,10 @@ def main():
             action_char = human.next_action_char()
             action_str += action_char
 
-            for human in humans:
-                print(
-                    f"# human id:{human.id}, role:{human.role}, target:{human.target}"
-                )
+            # for human in humans:
+            #     print(
+            #         f"# human id:{human.id}, role:{human.role}, target:{human.target}"
+            #     )
 
         # 人間の行動を出力
         print(action_str, flush=True)
