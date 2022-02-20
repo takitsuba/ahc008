@@ -89,6 +89,7 @@ class Tile(Enum):
     def __str__(self):
         return str(self.value)
 
+
 class Floor:
     def __init__(self, floor_len, margin):
         self.tiles: List[List[Tile]] = []
@@ -302,7 +303,6 @@ class HumansCount(Floor):
         col = point.y
         return self.counts[row][col]
 
-            
 
 class Visited(Floor):
     def __init__(self, margin):
@@ -326,8 +326,6 @@ class Visited(Floor):
         row = point.x
         col = point.y
         return self.counts[row][col] > 0
-
-        
 
 
 assert len(partition_cands.tiles) == FLOOR_LEN + MARGIN * 2
@@ -398,8 +396,8 @@ class Pet:
                     check = free_dfs(neighbour)
                     if check:
                         return True
-        
-        check = free_dfs(self.point) 
+
+        check = free_dfs(self.point)
 
         # checkはNoneのことがある。その場合はFalse
         return check if check else False
