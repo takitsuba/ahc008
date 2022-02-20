@@ -3,23 +3,30 @@ import argparse
 import subprocess
 from multiprocessing import Pool
 from tqdm import tqdm
+import time
 
 
 def test_once(file_num):
+
+    start = time.time()
+
     score_str = subprocess.getoutput(
         f"cd tools && cargo run --release --bin tester poetry run python3 ../main.py < in/{file_num}.txt > out/{file_num}.txt"
     )
+
+    seconds = time.time() - start
+
     score = int(score_str.split()[-1])
     if score == 0:
         print(score_str)
-    return score
+    return score, seconds
 
 
 def local_test(test_cnt, disable_tqdm):
     file_num_list = [format(i, "0>4") for i in range(test_cnt)]
 
     with Pool(processes=4) as p:
-        scores = list(
+        scores_and_seconds = list(
             tqdm(
                 p.imap(func=test_once, iterable=file_num_list),
                 total=test_cnt,
@@ -27,7 +34,12 @@ def local_test(test_cnt, disable_tqdm):
             )
         )
 
-    print(f"mean score: {sum(scores) / len(scores)}")
+    scores = [score for score, _ in scores_and_seconds]
+    seconds = [seconds for _, seconds in scores_and_seconds]
+
+    print(
+        f"mean score: {sum(scores) / len(scores)}, mean seconds: {sum(seconds) / len(seconds)}"
+    )
 
 
 if __name__ == "__main__":
