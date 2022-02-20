@@ -256,15 +256,12 @@ def solve_route_detour(start, goal, floor):
         # steps = cal_steps(start, goal)
         return dfs(start, goal, steps)
 
-    for i in range(10):
+    for i in range(5):
         route = solve_route(start, goal, floor, steps)
         if len(route) > 0:
             return route
         else:
-            if i % 2 == 0:
-                steps += Steps(1, 1, 0, 0)
-            else:
-                steps += Steps(0, 0, 1, 1)
+            steps += Steps(1, 1, 1, 1)
     return []
 
 
