@@ -403,7 +403,7 @@ class Human:
             if len(path) >= 2:
                 next_point = path[1]
                 direction = next_point - self.point
-                print(f"# {next_point}, {self.point}, {direction}")
+                # print(f"# {next_point}, {self.point}, {direction}")
                 directions += [direction]
 
             directions += neighbour_diffs
@@ -494,32 +494,34 @@ def main():
             human.select_target(pets)
 
             distance_between_human_target = cal_distance(human, human.target)
-            if distance_between_human_target == 3: #<= human.block_dist:
+
+            # TODO: 2しか離れてなくても、遠いところに置くことは可能。
+            if 3 <= distance_between_human_target <= human.block_dist:
                 # 優先度高いものほど左にする
-                blockade_cands = []
+                # get_dirs_priority
+                blockade_dirs = get_dirs_priority(human.point, human.target.point)
+                blockade_cands: List[Point] = [human.point + dir for dir in blockade_dirs]
 
-                # TODO: 回転すれば省略できそう
-                # 斜めの方が優先度高い
-                # TODO: diffのクラス
-                diagonal_diffs = [[1, 1], [1, -1], [-1, 1], [-1, -1]]
-                for diff in diagonal_diffs:
-                    blockade_point = Point(
-                        human.target.point.x + diff[0], human.target.point.y + diff[1]
-                    )
-                    if cal_distance_points(human.point, blockade_point) == 2:
-                        blockade_cands.append(blockade_point)
+                # # TODO: 回転すれば省略できそう
+                # # 斜めの方が優先度高い
+                # # TODO: diffのクラス
+                # diagonal_diffs = [[1, 1], [1, -1], [-1, 1], [-1, -1]]
+                # for diff in diagonal_diffs:
+                #     blockade_point = Point(
+                #         human.target.point.x + diff[0], human.target.point.y + diff[1]
+                #     )
+                #     if cal_distance_points(human.point, blockade_point) == 2:
+                #         blockade_cands.append(blockade_point)
 
-                # TODO: 関数を作成する
-                # x,y どちらかは同じ座標の場合
-                same_axis_diffs = [[2, 0], [-2, 0], [0, 2], [0, -2]]
-                for diff in same_axis_diffs:
-                    blockade_point = Point(
-                        human.target.point.x + diff[0], human.target.point.y + diff[1]
-                    )
-                    if cal_distance_points(human.point, blockade_point) == 1:
-                        blockade_cands.append(blockade_point)
-
-                    # import pdb; pdb.set_trace()
+                # # TODO: 関数を作成する
+                # # x,y どちらかは同じ座標の場合
+                # same_axis_diffs = [[2, 0], [-2, 0], [0, 2], [0, -2]]
+                # for diff in same_axis_diffs:
+                #     blockade_point = Point(
+                #         human.target.point.x + diff[0], human.target.point.y + diff[1]
+                #     )
+                #     if cal_distance_points(human.point, blockade_point) == 1:
+                #         blockade_cands.append(blockade_point)
 
                 for blockade_cand in blockade_cands:
                     # その位置に壁やpartitionがなく、人やペットの制約もなければ、partitionを立てる
@@ -551,10 +553,10 @@ def main():
             action_char = human.next_action_char()
             action_str += action_char
 
-            # for human in humans:
-            #     print(
-            #         f"# human id:{human.id}, role:{human.role}, target:{human.target}"
-            #     )
+            for human in humans:
+                print(
+                    f"# human id:{human.id}, role:{human.role}, target:{human.target}"
+                )
 
         # 人間の行動を出力
         print(action_str, flush=True)
