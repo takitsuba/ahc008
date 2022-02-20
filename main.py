@@ -510,27 +510,6 @@ def main():
                     human.point + dir for dir in blockade_dirs
                 ]
 
-                # # TODO: 回転すれば省略できそう
-                # # 斜めの方が優先度高い
-                # # TODO: diffのクラス
-                # diagonal_diffs = [[1, 1], [1, -1], [-1, 1], [-1, -1]]
-                # for diff in diagonal_diffs:
-                #     blockade_point = Point(
-                #         human.target.point.x + diff[0], human.target.point.y + diff[1]
-                #     )
-                #     if cal_distance_points(human.point, blockade_point) == 2:
-                #         blockade_cands.append(blockade_point)
-
-                # # TODO: 関数を作成する
-                # # x,y どちらかは同じ座標の場合
-                # same_axis_diffs = [[2, 0], [-2, 0], [0, 2], [0, -2]]
-                # for diff in same_axis_diffs:
-                #     blockade_point = Point(
-                #         human.target.point.x + diff[0], human.target.point.y + diff[1]
-                #     )
-                #     if cal_distance_points(human.point, blockade_point) == 1:
-                #         blockade_cands.append(blockade_point)
-
                 for blockade_cand in blockade_cands:
                     # その位置に壁やpartitionがなく、人やペットの制約もなければ、partitionを立てる
                     if (floor.get_tile(blockade_cand) == Tile.EMPTY) & (
@@ -539,8 +518,6 @@ def main():
                         human.next_blockade = blockade_cand
                         floor.update_tile(human.next_blockade, Tile.PARTITION)
                         break
-
-                # import pdb; pdb.set_trace()
 
             else:
                 # 移動先の優先順位付
@@ -555,8 +532,6 @@ def main():
                         # 進む先のtileはPartition候補から消す
                         partition_cands.update_tile(human.next_move, Tile.NOTUSE)
                         break
-
-                # import pdb; pdb.set_trace()
 
             action_char = human.next_action_char()
             action_str += action_char
