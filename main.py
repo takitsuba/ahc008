@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from shutil import move
-from typing import List, Union, Optional, Dict
+from typing import List, Union, Optional, Dict, Set
 from enum import Enum
 import random
 import copy
@@ -40,6 +40,9 @@ class Point:
         diff_x = self.x - other.x
         diff_y = self.y - other.y
         return PointDiff(diff_x, diff_y)
+
+    def __hash__(self) -> int:
+        return hash((self.x, self.y))
 
 
 move_actions_table = {
@@ -195,7 +198,10 @@ def solve_route(start, goal, floor) -> List[Point]:
 
         return steps
 
+    visited: Set[Point] = set()
+
     def dfs(start, goal, steps) -> List[Point]:
+        nonlocal visited
         if start == goal:
             return [goal]
 
@@ -206,12 +212,17 @@ def solve_route(start, goal, floor) -> List[Point]:
             diff = move_char_to_diff[step_dir]
             next_point = start + diff
 
-            if floor.get_tile(next_point) not in [Tile.WALL, Tile.PARTITION]:
+            if (next_point not in visited) & (
+                floor.get_tile(next_point) not in [Tile.WALL, Tile.PARTITION]
+            ):
                 next_steps = copy.deepcopy(steps)
                 next_steps[step_dir] -= 1
                 result = dfs(next_point, goal, next_steps)
                 if len(result) > 0:
                     return [start] + result
+
+        visited.add(start)
+
         return []
 
     steps = cal_steps(start, goal)
@@ -412,6 +423,10 @@ class Team:
         for pet, distance_sum in pet_distance_sum.items():
             if distance_sum < nearest_distance_sum:
                 self.target = pet
+
+    # def have_catched():
+    #     human_floor = Floor()
+    #     def
 
 
 def initial_input():
