@@ -172,6 +172,7 @@ class Steps(dict):
     def __repr__(self):
         return f"({self['U']}, {self['D']}, {self['L']}, {self['R']})"
 
+
 def cal_steps(start, goal):
     diff = goal - start
     steps = Steps()
@@ -201,6 +202,7 @@ def get_dirs_priority(start, goal) -> List[PointDiff]:
             dirs_diff.append(move_char_to_diff[dir_str])
 
     return dirs_diff
+
 
 def solve_route(start, goal, floor) -> List[Point]:
     """startからgoalまでの経路のPointのListを返す
@@ -284,13 +286,15 @@ class Kind(Enum):
     DOG = 4
     CAT = 5
 
+
 kind_to_block_dist = {
     Kind.COW: 3,
     Kind.PIG: 4,
     Kind.RABBIT: 5,
     Kind.DOG: 4,
-    Kind.CAT: 4
+    Kind.CAT: 4,
 }
+
 
 @dataclass
 class Pet:
@@ -300,7 +304,9 @@ class Pet:
 
     def move(self, action_char):
         diff = move_char_to_diff[action_char]
-        self.point += diff
+        next_point = self.point + diff
+        if floor.get_tile(next_point) not in [Tile.WALL, Tile.PARTITION]:
+            self.point = next_point
 
     def __hash__(self) -> int:
         return self.id
@@ -321,7 +327,7 @@ class Human:
         self.target = self.team.target  # type:ignore
 
         # petのkindによってblockする距離を変える
-        self.block_dist = kind_to_block_dist[self.target.kind] # type: ignore
+        self.block_dist = kind_to_block_dist[self.target.kind]  # type: ignore
 
         # # 最も近いペットをターゲットにする
         # # TODO: 囲われているペットは無視する
@@ -500,7 +506,9 @@ def main():
                 # 優先度高いものほど左にする
                 # get_dirs_priority
                 blockade_dirs = get_dirs_priority(human.point, human.target.point)
-                blockade_cands: List[Point] = [human.point + dir for dir in blockade_dirs]
+                blockade_cands: List[Point] = [
+                    human.point + dir for dir in blockade_dirs
+                ]
 
                 # # TODO: 回転すれば省略できそう
                 # # 斜めの方が優先度高い
