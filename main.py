@@ -371,22 +371,22 @@ class Human:
         directions: List[PointDiff] = []
         diff_to_target: PointDiff = self.target.point - self.point  # type: ignore
 
-        # roleに応じて、ターゲットの上下左右に寄らせる
-        role_dir: PointDiff = list(blockade_conv_table.keys())[self.role]  # type: ignore
-        if role_dir.x != 0:
-            # targetとの相対位置と担当が異なる場合
-            # H→P　といた時、 diff_to_target は (0, 1)。
-            # このHの担当が (0, -1) なら、現状正しい。
-            # そのため掛け算したときに符号が正なら修正する必要
-            if diff_to_target.x * role_dir.x > 0:
-                # 担当方向に進める
-                directions.append(role_dir)
-        else:
-            # targetとの相対位置と担当が異なる場合
-            # TODO: refactor
-            if diff_to_target.y * role_dir.y < 0:
-                # 担当方向に進める
-                directions.append(role_dir)
+        # # roleに応じて、ターゲットの上下左右に寄らせる
+        # role_dir: PointDiff = list(blockade_conv_table.keys())[self.role]  # type: ignore
+        # if role_dir.x != 0:
+        #     # targetとの相対位置と担当が異なる場合
+        #     # H→P　といた時、 diff_to_target は (0, 1)。
+        #     # このHの担当が (0, -1) なら、現状正しい。
+        #     # そのため掛け算したときに符号が正なら修正する必要
+        #     if diff_to_target.x * role_dir.x > 0:
+        #         # 担当方向に進める
+        #         directions.append(role_dir)
+        # else:
+        #     # targetとの相対位置と担当が異なる場合
+        #     # TODO: refactor
+        #     if diff_to_target.y * role_dir.y < 0:
+        #         # 担当方向に進める
+        #         directions.append(role_dir)
 
         distance = abs(diff_to_target.x) + abs(diff_to_target.y)
         random.shuffle(neighbour_diffs)
