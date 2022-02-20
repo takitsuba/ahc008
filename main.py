@@ -89,7 +89,6 @@ class Tile(Enum):
     def __str__(self):
         return str(self.value)
 
-
 class Floor:
     def __init__(self, floor_len, margin):
         self.tiles: List[List[Tile]] = []
@@ -274,6 +273,63 @@ class PartitionCands(Floor):
 
 partition_cands = PartitionCands(MARGIN)
 
+
+class HumansCount(Floor):
+    def __init__(self, margin, humans):
+        self.margin: int = margin
+        self.counts: List[List[int]] = self.create_zeros()
+        self.update_human_counts(humans)
+
+    def create_zeros(self):
+        counts = []
+        square_len = FLOOR_LEN + self.margin * 2
+        for _ in range(square_len):
+            row = [0] * square_len
+            counts.append(row)
+        return counts
+
+    def add_one(self, point: Point):
+        row = point.x
+        col = point.y
+        self.counts[row][col] += 1
+
+    def update_human_counts(self, humans):
+        for human in humans:
+            self.add_one(human.point)
+
+    def get_cnt(self, point):
+        row = point.x
+        col = point.y
+        return self.counts[row][col]
+
+            
+
+class Visited(Floor):
+    def __init__(self, margin):
+        self.margin: int = margin
+        self.counts: List[List[int]] = self.create_zeros()
+
+    def create_zeros(self):
+        counts = []
+        square_len = FLOOR_LEN + self.margin * 2
+        for _ in range(square_len):
+            row = [0] * square_len
+            counts.append(row)
+        return counts
+
+    def add_one(self, point: Point):
+        row = point.x
+        col = point.y
+        self.counts[row][col] += 1
+
+    def is_visited(self, point: Point) -> bool:
+        row = point.x
+        col = point.y
+        return self.counts[row][col] > 0
+
+        
+
+
 assert len(partition_cands.tiles) == FLOOR_LEN + MARGIN * 2
 for row in partition_cands.tiles:
     assert len(row) == FLOOR_LEN + MARGIN * 2
@@ -311,13 +367,42 @@ class Pet:
     def __hash__(self) -> int:
         return self.id
 
-    # def is_catched(self, humans):
-    #     can_go_cnt = 0
-    #     visited = Floor()
+    def is_free(self, humans) -> bool:
+        THRESHOLD_POINTS = 50
+        can_go_cnt = 0
+        visited = Visited(MARGIN)
+        humans_count = HumansCount(MARGIN, humans)
 
-    #     humans_floor = Floor()
-    #     for human
-    #     def dfs(point):
+        # can_go_cnt を数える
+        # 下記の再帰が終わったタイミングで can_go_cnt が THRESHOLD未満で、
+        # humanもその範囲にいないなら is_catched
+        # humanがいるなら free。 can_go_cntがTHRESHOLD以上なら free。
+        def free_dfs(point):
+            nonlocal can_go_cnt
+            if visited.is_visited(point):
+                return None
+            visited.add_one(point)
+
+            # TODO: 人間も一緒に閉じ込められてしまった場合
+            if humans_count.get_cnt(point) > 0:
+                return True
+
+            can_go_cnt += 1
+            if can_go_cnt >= THRESHOLD_POINTS:
+                # 閾値を超えたら終了
+                return True
+
+            for neighbour_diff in neighbour_diffs:
+                neighbour = point + neighbour_diff
+                if floor.get_tile(neighbour) not in [Tile.WALL, Tile.PARTITION]:
+                    check = free_dfs(neighbour)
+                    if check:
+                        return True
+        
+        check = free_dfs(self.point) 
+
+        # checkはNoneのことがある。その場合はFalse
+        return check if check else False
 
 
 @dataclass
@@ -459,7 +544,7 @@ class Team:
 
         nearest_distance_sum = MAXINT
         for pet, distance_sum in pet_distance_sum.items():
-            if distance_sum < nearest_distance_sum:
+            if (pet.is_free(self.humans)) & (distance_sum < nearest_distance_sum):
                 self.target = pet
 
 
