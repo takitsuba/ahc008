@@ -178,6 +178,9 @@ class Steps(dict):
             next_steps[key] = self[key] + other[key]
         return next_steps
 
+    def __hash__(self):
+        return hash((self["U"], self["D"], self["L"], self["R"]))
+
 
 def cal_steps(start, goal):
     diff = goal - start
@@ -210,47 +213,48 @@ def get_dirs_priority(start, goal) -> List[PointDiff]:
     return dirs_diff
 
 
-def solve_route(start, goal, floor, steps) -> List[Point]:
-    """startからgoalまでの経路のPointのListを返す
-    経路長は最短であることを前提とする。
-    経路が見つからなければ空のListを返す。
-
-    TODO: 経路長が最短でない場合(迂回が必要な場合)
-    """
-
-    visited: Set[Point] = set()
-
-    def dfs(start, goal, steps) -> List[Point]:
-        nonlocal visited
-        if start == goal:
-            return [goal]
-
-        for step_dir, step_cnt in steps.items():
-            if step_cnt == 0:
-                continue
-
-            diff = move_char_to_diff[step_dir]
-            next_point = start + diff
-
-            if (next_point not in visited) & (
-                floor.get_tile(next_point) not in [Tile.WALL, Tile.PARTITION]
-            ):
-                next_steps = copy.deepcopy(steps)
-                next_steps[step_dir] -= 1
-                result = dfs(next_point, goal, next_steps)
-                if len(result) > 0:
-                    return [start] + result
-
-        visited.add(start)
-
-        return []
-
-    # steps = cal_steps(start, goal)
-    return dfs(start, goal, steps)
-
-
 def solve_route_detour(start, goal, floor):
     steps = cal_steps(start, goal)
+
+    visited_steps: VisitedSteps = VisitedSteps(MARGIN)
+
+    def solve_route(start, goal, floor, steps) -> List[Point]:
+        """startからgoalまでの経路のPointのListを返す
+        経路長は最短であることを前提とする。
+        経路が見つからなければ空のListを返す。
+
+        TODO: 経路長が最短でない場合(迂回が必要な場合)
+        """
+
+        nonlocal visited_steps
+
+        def dfs(start, goal, steps) -> List[Point]:
+            nonlocal visited_steps
+            if start == goal:
+                return [goal]
+
+            for step_dir, step_cnt in steps.items():
+                if step_cnt == 0:
+                    continue
+
+                diff = move_char_to_diff[step_dir]
+                next_point = start + diff
+                next_steps = copy.deepcopy(steps)
+                next_steps[step_dir] -= 1
+
+                if (not visited_steps.is_visited_with_steps(next_point, next_steps)) & (
+                    floor.get_tile(next_point) not in [Tile.WALL, Tile.PARTITION]
+                ):
+                    result = dfs(next_point, goal, next_steps)
+                    if len(result) > 0:
+                        return [start] + result
+
+            visited_steps.visits(start, steps)
+
+            return []
+
+        # steps = cal_steps(start, goal)
+        return dfs(start, goal, steps)
 
     for i in range(10):
         route = solve_route(start, goal, floor, steps)
@@ -347,6 +351,30 @@ class Visited(Floor):
         row = point.x
         col = point.y
         return self.counts[row][col] > 0
+
+
+class VisitedSteps(Floor):
+    def __init__(self, margin):
+        self.margin: int = margin
+        self.cells: List[List[Set[Steps]]] = self.create_nones()
+
+    def create_nones(self):
+        counts = []
+        square_len = FLOOR_LEN + self.margin * 2
+        for _ in range(square_len):
+            row: List[Set[Steps]] = [set() for _ in range(square_len)]
+            counts.append(row)
+        return counts
+
+    def visits(self, point: Point, steps: Steps):
+        row = point.x
+        col = point.y
+        self.cells[row][col].add(steps)
+
+    def is_visited_with_steps(self, point: Point, steps: Steps) -> bool:
+        row = point.x
+        col = point.y
+        return steps in self.cells[row][col]
 
 
 assert len(partition_cands.tiles) == FLOOR_LEN + MARGIN * 2
