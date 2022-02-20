@@ -172,6 +172,12 @@ class Steps(dict):
     def __repr__(self):
         return f"({self['U']}, {self['D']}, {self['L']}, {self['R']})"
 
+    def __add__(self, other):
+        next_steps = Steps()
+        for key in ["U", "D", "L", "R"]:
+            next_steps[key] = self[key] + other[key]
+        return next_steps
+
 
 def cal_steps(start, goal):
     diff = goal - start
@@ -204,12 +210,12 @@ def get_dirs_priority(start, goal) -> List[PointDiff]:
     return dirs_diff
 
 
-def solve_route(start, goal, floor) -> List[Point]:
+def solve_route(start, goal, floor, steps) -> List[Point]:
     """startからgoalまでの経路のPointのListを返す
     経路長は最短であることを前提とする。
     経路が見つからなければ空のListを返す。
 
-    TODO: 経路長が最短でない場合
+    TODO: 経路長が最短でない場合(迂回が必要な場合)
     """
 
     visited: Set[Point] = set()
@@ -239,8 +245,23 @@ def solve_route(start, goal, floor) -> List[Point]:
 
         return []
 
-    steps = cal_steps(start, goal)
+    # steps = cal_steps(start, goal)
     return dfs(start, goal, steps)
+
+
+def solve_route_detour(start, goal, floor):
+    steps = cal_steps(start, goal)
+
+    for i in range(10):
+        route = solve_route(start, goal, floor, steps)
+        if len(route) > 0:
+            return route
+        else:
+            if i % 2 == 0:
+                steps += Steps(1, 1, 0, 0)
+            else:
+                steps += Steps(0, 0, 1, 1)
+    return []
 
 
 class PartitionCands(Floor):
@@ -496,7 +517,7 @@ class Human:
         else:
             # 4より大きい場合
             # 近づく
-            path = solve_route(self.point, self.target.point, floor)  # type: ignore
+            path = solve_route_detour(self.point, self.target.point, floor)  # type: ignore
             if len(path) >= 2:
                 next_point = path[1]
                 direction = next_point - self.point
