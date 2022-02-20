@@ -6,6 +6,7 @@ from enum import Enum
 import random
 import copy
 from collections import OrderedDict
+from operator import itemgetter
 
 random.seed(11)
 
@@ -171,6 +172,35 @@ class Steps(dict):
     def __repr__(self):
         return f"({self['U']}, {self['D']}, {self['L']}, {self['R']})"
 
+def cal_steps(start, goal):
+    diff = goal - start
+    steps = Steps()
+    # 上下
+    if diff.x > 0:
+        steps["D"] = diff.x
+    else:
+        # 正の数にする
+        steps["U"] = -diff.x
+
+    # 左右
+    if diff.y > 0:
+        steps["R"] = diff.y
+    else:
+        steps["L"] = -diff.y
+
+    return steps
+
+
+def get_dirs_priority(start, goal) -> List[PointDiff]:
+    steps = cal_steps(start, goal)
+
+    dirs_diff: List[PointDiff] = []
+    # cntが大きい方角順
+    for dir_str, cnt in sorted(steps.items(), key=itemgetter(1), reverse=True):
+        if cnt > 0:
+            dirs_diff.append(move_char_to_diff[dir_str])
+
+    return dirs_diff
 
 def solve_route(start, goal, floor) -> List[Point]:
     """startからgoalまでの経路のPointのListを返す
@@ -179,24 +209,6 @@ def solve_route(start, goal, floor) -> List[Point]:
 
     TODO: 経路長が最短でない場合
     """
-
-    def cal_steps(start, goal):
-        diff = goal - start
-        steps = Steps()
-        # 上下
-        if diff.x > 0:
-            steps["D"] = diff.x
-        else:
-            # 正の数にする
-            steps["U"] = -diff.x
-
-        # 左右
-        if diff.y > 0:
-            steps["R"] = diff.y
-        else:
-            steps["L"] = -diff.y
-
-        return steps
 
     visited: Set[Point] = set()
 
@@ -272,6 +284,13 @@ class Kind(Enum):
     DOG = 4
     CAT = 5
 
+kind_to_block_dist = {
+    Kind.COW: 3,
+    Kind.PIG: 4,
+    Kind.RABBIT: 5,
+    Kind.DOG: 4,
+    Kind.CAT: 4
+}
 
 @dataclass
 class Pet:
@@ -294,11 +313,16 @@ class Human:
     team: Optional[Team] = None
     role: Optional[int] = None
     target: Optional[Pet] = None
+    block_dist: int = 3
     next_blockade: Optional[Point] = None
     next_move: Optional[Point] = None
 
     def select_target(self, pets):
         self.target = self.team.target  # type:ignore
+
+        # petのkindによってblockする距離を変える
+        self.block_dist = kind_to_block_dist[self.target.kind] # type: ignore
+
         # # 最も近いペットをターゲットにする
         # # TODO: 囲われているペットは無視する
         # # TODO: 最短経路を考慮すべきか？
@@ -469,10 +493,8 @@ def main():
             # TODO: 一度決めたらターゲットは当分更新しないべき？
             human.select_target(pets)
 
-            # 距離が3なら2のところを埋める
-            # 8パターンなら総当たりで良いと考えた
             distance_between_human_target = cal_distance(human, human.target)
-            if distance_between_human_target == 3:
+            if distance_between_human_target == 3: #<= human.block_dist:
                 # 優先度高いものほど左にする
                 blockade_cands = []
 
