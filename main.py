@@ -1,11 +1,11 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from shutil import move
-from typing import List, Union, Optional, Dict, Set
+from typing import Deque, List, Union, Optional, Dict, Set
 from enum import Enum
 import random
 import copy
-from collections import OrderedDict
+from collections import OrderedDict, deque
 from operator import itemgetter
 
 random.seed(11)
@@ -462,6 +462,8 @@ class Human:
     block_dist: int = 3
     next_blockade: Optional[Point] = None
     next_move: Optional[Point] = None
+    route: Deque[Point] = deque()
+    solve_route_turn: int = 0
 
     def select_target(self, pets):
         self.target = self.team.target  # type:ignore
@@ -498,6 +500,26 @@ class Human:
         self.next_move = None
         self.select_target(pets)
 
+    def think_route(self, turn):
+        # humanの solve_turn を過ぎていたら solveし直す
+        # routeの次が通行不能になってる場合もsolveし直す
+        # Refactor
+        if (self.solve_route_turn <= turn) or (
+            floor.get_tile(self.route[0]) in [Tile.WALL, Tile.PARTITION]
+        ):
+            self.route = deque(solve_route_detour(self.point, self.target.point, floor))  # type: ignore
+            route_len = len(self.route)
+            if route_len > 0:
+                # 1つ目は自分がいる場所なので削除
+                _ = self.route.popleft()
+
+            if route_len >= 6:
+                # 遠いならそのルートの半分の長さまではそのままでいく。
+                self.solve_route_turn = turn + route_len // 2
+            else:
+                # 近いなら毎ターンsolveする
+                self.solve_route_turn = turn + 1
+
     def sort_directions(self) -> List[PointDiff]:
         """directionを選ぶ関数
         絶対値が大きいdirectionを選びやすい
@@ -530,6 +552,12 @@ class Human:
 
         distance = abs(diff_to_target.x) + abs(diff_to_target.y)
         random.shuffle(neighbour_diffs)
+
+        if distance <= 4:
+            self.route = deque()
+            # 次のturnにrouteを算出する
+            self.solve_route_turn = -1
+
         if distance == 0:
             # ランダム
             directions += neighbour_diffs
@@ -545,9 +573,9 @@ class Human:
         else:
             # 4より大きい場合
             # 近づく
-            path = solve_route_detour(self.point, self.target.point, floor)  # type: ignore
-            if len(path) >= 2:
-                next_point = path[1]
+            # Refactor
+            if len(self.route) >= 2:
+                next_point = self.route.popleft()
                 direction = next_point - self.point
                 # print(f"# {next_point}, {self.point}, {direction}")
                 directions += [direction]
@@ -656,6 +684,10 @@ def main():
                         break
 
             else:
+                # turn数に応じてrouteを引き直す
+                # Refactor
+                human.think_route(turn)
+
                 # 移動先の優先順位付
                 directions = human.sort_directions()
 
@@ -671,11 +703,6 @@ def main():
 
             action_char = human.next_action_char()
             action_str += action_char
-
-            for human in humans:
-                print(
-                    f"# human id:{human.id}, role:{human.role}, target:{human.target}"
-                )
 
         # 人間の行動を出力
         print(action_str, flush=True)
