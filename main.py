@@ -133,16 +133,16 @@ class Floor:
         col = point.y
         self.tiles[row][col] = tile
 
-        # 行くべきでない場所を更新する
-        # 何かしらで埋められた場合は、行くべきでない場所が増えたか確認し更新する
-        if tile != Tile.EMPTY:
-            for diff in neighbour_diffs:
-                danger_cand = point + diff
-                cnt = self.count_neighbor_filled(danger_cand)
-                # 周囲を3つ以上何かに囲まれていてemptyならdangerに変更
-                if (cnt >= 3) & (self.get_tile(point) == Tile.EMPTY):
-                    # WARNING: 無限ループ
-                    self.update_tile(danger_cand, Tile.DANGER)
+        # # 行くべきでない場所を更新する
+        # # 何かしらで埋められた場合は、行くべきでない場所が増えたか確認し更新する
+        # if tile != Tile.EMPTY:
+        #     for diff in neighbour_diffs:
+        #         danger_cand = point + diff
+        #         cnt = self.count_neighbor_filled(danger_cand)
+        #         # 周囲を3つ以上何かに囲まれていてemptyならdangerに変更
+        #         if (cnt >= 3) & (self.get_tile(point) == Tile.EMPTY):
+        #             # WARNING: 無限ループ
+        #             self.update_tile(danger_cand, Tile.DANGER)
 
     def count_neighbor_filled(self, point: Point):
         """argumentの隣がいくつEMPTYでないかを数える"""
@@ -311,6 +311,14 @@ class Pet:
     def __hash__(self) -> int:
         return self.id
 
+    # def is_catched(self, humans):
+    #     can_go_cnt = 0
+    #     visited = Floor()
+
+    #     humans_floor = Floor()
+    #     for human
+    #     def dfs(point):
+
 
 @dataclass
 class Human:
@@ -453,10 +461,6 @@ class Team:
         for pet, distance_sum in pet_distance_sum.items():
             if distance_sum < nearest_distance_sum:
                 self.target = pet
-
-    # def have_catched():
-    #     human_floor = Floor()
-    #     def
 
 
 def initial_input():
