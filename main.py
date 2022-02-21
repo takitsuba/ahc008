@@ -23,6 +23,11 @@ class PointDiff:
     x: int
     y: int
 
+    def __eq__(self, other):
+        if not isinstance(other, PointDiff):
+            return False
+        return (self.x == other.x) & (self.y == other.y)
+
     def __hash__(self):
         return hash((self.x, self.y))
 
@@ -41,6 +46,11 @@ class Point:
         diff_x = self.x - other.x
         diff_y = self.y - other.y
         return PointDiff(diff_x, diff_y)
+
+    def __eq__(self, other):
+        if not isinstance(other, Point):
+            return False
+        return (self.x == other.x) & (self.y == other.y)
 
     def __hash__(self) -> int:
         return hash((self.x, self.y))
@@ -177,6 +187,15 @@ class Steps(dict):
         for key in ["U", "D", "L", "R"]:
             next_steps[key] = self[key] + other[key]
         return next_steps
+
+    def __eq__(self, other):
+        if not isinstance(other, Steps):
+            return False
+
+        for k in self.keys():
+            if self[k] != other[k]:
+                return False
+        return True
 
     def __hash__(self):
         return hash((self["U"], self["D"], self["L"], self["R"]))
@@ -407,6 +426,11 @@ class Pet:
         next_point = self.point + diff
         if floor.get_tile(next_point) not in [Tile.WALL, Tile.PARTITION]:
             self.point = next_point
+
+    def __eq__(self, other):
+        if not isinstance(other, Pet):
+            return False
+        return self.id == other.id
 
     def __hash__(self) -> int:
         return self.id
