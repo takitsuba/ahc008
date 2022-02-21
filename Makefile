@@ -14,9 +14,10 @@ test:
 test_all:
 	poetry run python local_test.py --count 1000 --disable_tqdm
 
+
 .PHONY: strip_hints
 strip_hints:
-	poetry run strip-hints main.py -o main_nohints.py
+	poetry run strip-hints main.py | sed -e '/from __future__ import annotations/d' -e '/^from typing import/d' > main_nohints.py
 
 .PHONY: jupyter
 jupyter:
