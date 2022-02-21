@@ -419,7 +419,6 @@ class Pet:
         self.kind = kind
         self.point = point
 
-
     def move(self, action_char):
         diff = move_char_to_diff[action_char]
         next_point = self.point + diff
@@ -496,7 +495,6 @@ class Human:
         self.next_move = next_move
         self.route = route if route else deque()
         self.solve_route_turn = solve_route_turn
-
 
     def select_target(self, pets):
         self.target = self.team.target  # type:ignore
