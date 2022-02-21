@@ -710,16 +710,22 @@ def main():
             # TODO: 一度決めたらターゲットは当分更新しないべき？
             human.select_target(pets)
 
-            distance_between_human_target = cal_distance(human, human.target)
+            # turn数に応じてrouteを引き直す
+            # Refactor
+            human.think_route(turn)
+
+            distance_between_human_target = len(human.route)
 
             # TODO: 2しか離れてなくても、遠いところに置くことは可能。
             if 3 <= distance_between_human_target <= human.block_dist:
                 # 優先度高いものほど左にする
                 # get_dirs_priority
-                blockade_dirs = get_dirs_priority(human.point, human.target.point)
-                blockade_cands: List[Point] = [
-                    human.point + dir for dir in blockade_dirs
-                ]
+                # blockade_dirs = get_dirs_priority(human.point, human.target.point)
+                # blockade_cands: List[Point] = [
+                #     human.point + dir for dir in blockade_dirs
+                # ]
+
+                blockade_cands: List[Point] = [human.route[0]]
 
                 for blockade_cand in blockade_cands:
                     # その位置に壁やpartitionがなく、人やペットの制約もなければ、partitionを立てる
@@ -731,10 +737,6 @@ def main():
                         break
 
             else:
-                # turn数に応じてrouteを引き直す
-                # Refactor
-                human.think_route(turn)
-
                 # 移動先の優先順位付
                 directions = human.sort_directions()
 
