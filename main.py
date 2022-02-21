@@ -1,11 +1,9 @@
 from __future__ import annotations
-from dataclasses import dataclass
-from shutil import move
 from typing import Deque, List, Union, Optional, Dict, Set
 from enum import Enum
 import random
 import copy
-from collections import OrderedDict, deque
+from collections import deque
 from operator import itemgetter
 
 random.seed(11)
@@ -18,10 +16,10 @@ DANGER_CORNER_WIDTH = 3
 MAXINT = 9223372036854775807
 
 
-@dataclass
 class PointDiff:
-    x: int
-    y: int
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
 
     def __eq__(self, other):
         if not isinstance(other, PointDiff):
@@ -32,10 +30,10 @@ class PointDiff:
         return hash((self.x, self.y))
 
 
-@dataclass
 class Point:
-    x: int
-    y: int
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
 
     def __add__(self, other: Union[Point, PointDiff]):
         next_x = self.x + other.x
@@ -415,11 +413,12 @@ kind_to_block_dist = {
 }
 
 
-@dataclass
 class Pet:
-    id: int
-    kind: Kind
-    point: Point
+    def __init__(self, id, kind, point):
+        self.id = id
+        self.kind = kind
+        self.point = point
+
 
     def move(self, action_char):
         diff = move_char_to_diff[action_char]
@@ -473,18 +472,31 @@ class Pet:
         return check if check else False
 
 
-@dataclass
 class Human:
-    id: int
-    point: Point
-    team: Optional[Team] = None
-    role: Optional[int] = None
-    target: Optional[Pet] = None
-    block_dist: int = 3
-    next_blockade: Optional[Point] = None
-    next_move: Optional[Point] = None
-    route: Deque[Point] = deque()
-    solve_route_turn: int = 0
+    def __init__(
+        self,
+        id,
+        point,
+        team=None,
+        role=None,
+        target=None,
+        block_dist=3,
+        next_blockade=None,
+        next_move=None,
+        route=None,
+        solve_route_turn=0,
+    ):
+        self.id = id
+        self.point = point
+        self.team = team
+        self.role = role
+        self.target = target
+        self.block_dist = block_dist
+        self.next_blockade = next_blockade
+        self.next_move = next_move
+        self.route = route if route else deque()
+        self.solve_route_turn = solve_route_turn
+
 
     def select_target(self, pets):
         self.target = self.team.target  # type:ignore
@@ -615,7 +627,6 @@ class Human:
         return directions
 
 
-@dataclass
 class Team:
     def __init__(self, humans: List[Human], target: Optional[Pet] = None):
         self.humans = humans
