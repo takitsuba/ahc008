@@ -298,58 +298,6 @@ def solve_route(start, goal, floor) -> Optional[List[Point]]:  # type: ignore
     return None
 
 
-# def solve_route_detour(start, goal, floor):
-#     steps = cal_steps(start, goal)
-
-#     visited_steps: VisitedSteps = VisitedSteps(MARGIN)
-
-#     def solve_route(start, goal, floor, steps) -> List[Point]:
-#         """startからgoalまでの経路のPointのListを返す
-#         経路長は最短であることを前提とする。
-#         経路が見つからなければ空のListを返す。
-
-#         TODO: 経路長が最短でない場合(迂回が必要な場合)
-#         """
-
-#         nonlocal visited_steps
-
-#         def dfs(start, goal, steps) -> List[Point]:
-#             nonlocal visited_steps
-#             if start == goal:
-#                 return [goal]
-
-#             for step_dir, step_cnt in steps.items():
-#                 if step_cnt == 0:
-#                     continue
-
-#                 diff = move_char_to_diff[step_dir]
-#                 next_point = start + diff
-#                 next_steps = copy.deepcopy(steps)
-#                 next_steps[step_dir] -= 1
-
-#                 if (not visited_steps.is_visited_with_steps(next_point, next_steps)) & (
-#                     floor.get_tile(next_point) not in [Tile.WALL, Tile.PARTITION]
-#                 ):
-#                     result = dfs(next_point, goal, next_steps)
-#                     if len(result) > 0:
-#                         return [start] + result
-
-#             visited_steps.visits(start, steps)
-
-#             return []
-
-#         # steps = cal_steps(start, goal)
-#         return dfs(start, goal, steps)
-
-#     for i in range(5):
-#         route = solve_route(start, goal, floor, steps)
-#         if len(route) > 0:
-#             return route
-#         else:
-#             steps += Steps(1, 1, 1, 1)
-#     return []
-
-
 class PartitionCands(Floor):
     def __init__(self, MARGIN):
         self.tiles: List[List[Tile]] = self.create_empty_tiles(MARGIN)
@@ -606,9 +554,6 @@ class Human:
         if (self.solve_route_turn <= turn) or (
             floor.get_tile(self.route[0]) in [Tile.WALL, Tile.PARTITION]
         ):
-            print(f"# {self.point}, {self.target.point}")
-            print(f"# {solve_route(self.point, self.target.point, floor)}")
-            print(f"{floor}")
             route = solve_route(self.point, self.target.point, floor)
             if route is None:
                 self.route = deque()
