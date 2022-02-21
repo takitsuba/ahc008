@@ -53,6 +53,9 @@ class Point:
     def __hash__(self) -> int:
         return hash((self.x, self.y))
 
+    def __repr__(self):
+        return f"({self.x}, {self.y})"
+
 
 move_actions_table = {
     PointDiff(-1, 0): "U",
@@ -125,7 +128,7 @@ class Floor:
     def __repr__(self):
         tiles_txt = ""
         for row in self.tiles:
-            row_txt = ""
+            row_txt = "# "  # printする際に頭に＃があるとコメント扱いされる
             for tile in row:
                 row_txt += str(tile.value)
             tiles_txt += row_txt + "\n"
@@ -135,6 +138,9 @@ class Floor:
         row = point.x
         col = point.y
         return self.tiles[row][col]
+
+    def is_safe(self, point: Point):
+        return self.get_tile(point) not in [Tile.WALL, Tile.PARTITION]
 
     def update_tile(self, point: Point, tile: Tile):
         row = point.x
@@ -230,56 +236,118 @@ def get_dirs_priority(start, goal) -> List[PointDiff]:
     return dirs_diff
 
 
-def solve_route_detour(start, goal, floor):
-    steps = cal_steps(start, goal)
+class VisitedFloor(Floor):
+    def __init__(self, floor_len, margin):
+        self.floor_len: int = floor_len
+        self.margin: int = margin
+        self.routes: List[List[List[Point]]] = self.create()
 
-    visited_steps: VisitedSteps = VisitedSteps(MARGIN)
+    def create(self):
+        counts = []
+        square_len = self.floor_len + self.margin * 2
+        for _ in range(square_len):
+            row = [None] * square_len
+            counts.append(row)
+        return counts
 
-    def solve_route(start, goal, floor, steps) -> List[Point]:
-        """startからgoalまでの経路のPointのListを返す
-        経路長は最短であることを前提とする。
-        経路が見つからなければ空のListを返す。
+    def visit(self, point: Point, route):
+        row = point.x
+        col = point.y
+        self.routes[row][col] = route
 
-        TODO: 経路長が最短でない場合(迂回が必要な場合)
-        """
+    def get_route(self, point: Point) -> List[Point]:
+        row = point.x
+        col = point.y
+        return self.routes[row][col]
 
-        nonlocal visited_steps
+    def is_visited(self, point: Point) -> bool:
+        """Noneでなければ訪れたことがある"""
+        return self.get_route(point) != None
 
-        def dfs(start, goal, steps) -> List[Point]:
-            nonlocal visited_steps
-            if start == goal:
-                return [goal]
 
-            for step_dir, step_cnt in steps.items():
-                if step_cnt == 0:
-                    continue
+def solve_route(start, goal, floor) -> Optional[List[Point]]:  # type: ignore
+    """ゴールまでの経路のpointをリストで返す
+    STARTは含まず、GOALは含む。
+    STARTとGOALが同じ場合は空のリストを返す。
+    """
+    visited = VisitedFloor(floor_len=FLOOR_LEN, margin=MARGIN)
 
-                diff = move_char_to_diff[step_dir]
-                next_point = start + diff
-                next_steps = copy.deepcopy(steps)
-                next_steps[step_dir] -= 1
+    route: List[Point] = []
+    visited.visit(start, route)
 
-                if (not visited_steps.is_visited_with_steps(next_point, next_steps)) & (
-                    floor.get_tile(next_point) not in [Tile.WALL, Tile.PARTITION]
-                ):
-                    result = dfs(next_point, goal, next_steps)
-                    if len(result) > 0:
-                        return [start] + result
+    q = deque([start])
 
-            visited_steps.visits(start, steps)
+    while q:
+        now = q.popleft()
+        if now == goal:
+            return visited.get_route(now)
 
-            return []
+        for diff in neighbour_diffs:
+            neighbour = now + diff
 
-        # steps = cal_steps(start, goal)
-        return dfs(start, goal, steps)
+            if (not visited.is_visited(neighbour)) & floor.is_safe(neighbour):
+                q.append(neighbour)
+                route = visited.get_route(now) + [neighbour]
+                visited.visit(neighbour, route)
 
-    for i in range(5):
-        route = solve_route(start, goal, floor, steps)
-        if len(route) > 0:
-            return route
-        else:
-            steps += Steps(1, 1, 1, 1)
-    return []
+                # pathが長すぎる場合は囲われていると見なす
+                # TODO: 妥当なやり方
+                threshold = 50
+                if len(route) >= threshold:
+                    return None
+    return None
+
+
+# def solve_route_detour(start, goal, floor):
+#     steps = cal_steps(start, goal)
+
+#     visited_steps: VisitedSteps = VisitedSteps(MARGIN)
+
+#     def solve_route(start, goal, floor, steps) -> List[Point]:
+#         """startからgoalまでの経路のPointのListを返す
+#         経路長は最短であることを前提とする。
+#         経路が見つからなければ空のListを返す。
+
+#         TODO: 経路長が最短でない場合(迂回が必要な場合)
+#         """
+
+#         nonlocal visited_steps
+
+#         def dfs(start, goal, steps) -> List[Point]:
+#             nonlocal visited_steps
+#             if start == goal:
+#                 return [goal]
+
+#             for step_dir, step_cnt in steps.items():
+#                 if step_cnt == 0:
+#                     continue
+
+#                 diff = move_char_to_diff[step_dir]
+#                 next_point = start + diff
+#                 next_steps = copy.deepcopy(steps)
+#                 next_steps[step_dir] -= 1
+
+#                 if (not visited_steps.is_visited_with_steps(next_point, next_steps)) & (
+#                     floor.get_tile(next_point) not in [Tile.WALL, Tile.PARTITION]
+#                 ):
+#                     result = dfs(next_point, goal, next_steps)
+#                     if len(result) > 0:
+#                         return [start] + result
+
+#             visited_steps.visits(start, steps)
+
+#             return []
+
+#         # steps = cal_steps(start, goal)
+#         return dfs(start, goal, steps)
+
+#     for i in range(5):
+#         route = solve_route(start, goal, floor, steps)
+#         if len(route) > 0:
+#             return route
+#         else:
+#             steps += Steps(1, 1, 1, 1)
+#     return []
 
 
 class PartitionCands(Floor):
@@ -538,12 +606,16 @@ class Human:
         if (self.solve_route_turn <= turn) or (
             floor.get_tile(self.route[0]) in [Tile.WALL, Tile.PARTITION]
         ):
-            self.route = deque(solve_route_detour(self.point, self.target.point, floor))  # type: ignore
-            route_len = len(self.route)
-            if route_len > 0:
-                # 1つ目は自分がいる場所なので削除
-                _ = self.route.popleft()
+            print(f"# {self.point}, {self.target.point}")
+            print(f"# {solve_route(self.point, self.target.point, floor)}")
+            print(f"{floor}")
+            route = solve_route(self.point, self.target.point, floor)
+            if route is None:
+                self.route = deque()
+            else:
+                self.route = deque(route)
 
+            route_len = len(self.route)
             if route_len >= 6:
                 # 遠いならそのルートの半分の長さまではそのままでいく。
                 self.solve_route_turn = turn + route_len // 2
