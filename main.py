@@ -310,6 +310,11 @@ class PartitionCands(Floor):
             tiles.append(row)
         return tiles
 
+    def update_tile(self, point: Point, tile: Tile):
+        row = point.x
+        col = point.y
+        self.tiles[row][col] = tile
+
     def refresh(self, humans, pets):
         self.tiles = self.create_empty_tiles(MARGIN)
 
