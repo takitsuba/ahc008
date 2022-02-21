@@ -19,6 +19,7 @@ test_all:
 .PHONY: strip_hints
 strip_hints:
 	poetry run strip-hints main.py | sed -e '/from __future__ import annotations/d' -e '/^from typing import/d' > main_nohints.py
+	poetry run black main_nohints.py
 
 .PHONY: jupyter
 jupyter:
