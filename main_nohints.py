@@ -1,5 +1,3 @@
-from __future__ import annotations
-from typing import Deque, List, Union, Optional, Dict, Set
 from enum import Enum
 import random
 import copy
@@ -35,12 +33,12 @@ class Point:
         self.x = x
         self.y = y
 
-    def __add__(self, other: Union[Point, PointDiff]):
+    def __add__(self, other):
         next_x = self.x + other.x
         next_y = self.y + other.y
         return Point(next_x, next_y)
 
-    def __sub__(self, other: Point):
+    def __sub__(self, other):
         diff_x = self.x - other.x
         diff_y = self.y - other.y
         return PointDiff(diff_x, diff_y)
@@ -50,7 +48,7 @@ class Point:
             return False
         return (self.x == other.x) & (self.y == other.y)
 
-    def __hash__(self) -> int:
+    def __hash__(self):
         return hash((self.x, self.y))
 
     def __repr__(self):
@@ -77,16 +75,16 @@ blockade_conv_table = {
 neighbour_diffs = list(blockade_conv_table.keys())
 
 
-def cal_distance_points(p1: Point, p2: Point):
+def cal_distance_points(p1, p2):
     """Manhattan distance"""
     return abs(p1.x - p2.x) + abs(p1.y - p2.y)
 
 
-def cal_distance(animal1: Human, animal2: Human):
+def cal_distance(animal1, animal2):
     return cal_distance_points(animal1.point, animal2.point)
 
 
-def shortest_path_distance(p1: Point, p2: Point):
+def shortest_path_distance(p1, p2):
     pass
 
 
@@ -103,7 +101,7 @@ class Tile(Enum):
 
 class Floor:
     def __init__(self, floor_len, margin):
-        self.tiles: List[List[Tile]] = []
+        self.tiles = []
 
         # 上5行
         for _ in range(margin):
@@ -134,15 +132,15 @@ class Floor:
             tiles_txt += row_txt + "\n"
         return tiles_txt
 
-    def get_tile(self, point: Point):
+    def get_tile(self, point):
         row = point.x
         col = point.y
         return self.tiles[row][col]
 
-    def is_safe(self, point: Point):
+    def is_safe(self, point):
         return self.get_tile(point) not in [Tile.WALL, Tile.PARTITION]
 
-    def update_tile(self, point: Point, tile: Tile):
+    def update_tile(self, point, tile):
         row = point.x
         col = point.y
         self.tiles[row][col] = tile
@@ -162,11 +160,11 @@ class Floor:
                     # WARNING: 無限ループ
                     self.update_tile(danger_cand, Tile.DANGER)
 
-    def neighbor_empty(self, point: Point) -> List[Point]:
+    def neighbor_empty(self, point):
         """受け取ったpointの隣でwall, partitionでないものを返す
         これが1つしか返さなければ、与えたpointの唯一の通路になる
         """
-        emptys: List[Point] = []
+        emptys = []
         for diff in neighbour_diffs:
             neighbour = point + diff
             if self.get_tile(neighbour) not in [Tile.WALL, Tile.PARTITION]:
@@ -230,10 +228,10 @@ def cal_steps(start, goal):
     return steps
 
 
-def get_dirs_priority(start, goal) -> List[PointDiff]:
+def get_dirs_priority(start, goal):
     steps = cal_steps(start, goal)
 
-    dirs_diff: List[PointDiff] = []
+    dirs_diff = []
     # cntが大きい方角順
     for dir_str, cnt in sorted(steps.items(), key=itemgetter(1), reverse=True):
         if cnt > 0:
@@ -244,9 +242,9 @@ def get_dirs_priority(start, goal) -> List[PointDiff]:
 
 class VisitedFloor(Floor):
     def __init__(self, floor_len, margin):
-        self.floor_len: int = floor_len
-        self.margin: int = margin
-        self.routes: List[List[List[Point]]] = self.create()
+        self.floor_len = floor_len
+        self.margin = margin
+        self.routes = self.create()
 
     def create(self):
         counts = []
@@ -256,29 +254,29 @@ class VisitedFloor(Floor):
             counts.append(row)
         return counts
 
-    def visit(self, point: Point, route):
+    def visit(self, point, route):
         row = point.x
         col = point.y
         self.routes[row][col] = route
 
-    def get_route(self, point: Point) -> List[Point]:
+    def get_route(self, point):
         row = point.x
         col = point.y
         return self.routes[row][col]
 
-    def is_visited(self, point: Point) -> bool:
+    def is_visited(self, point):
         """Noneでなければ訪れたことがある"""
         return self.get_route(point) != None
 
 
-def solve_route(start, goal, floor) -> Optional[List[Point]]:  # type: ignore
+def solve_route(start, goal, floor):  # type: ignore
     """ゴールまでの経路のpointをリストで返す
     STARTは含まず、GOALは含む。
     STARTとGOALが同じ場合は空のリストを返す。
     """
     visited = VisitedFloor(floor_len=FLOOR_LEN, margin=MARGIN)
 
-    route: List[Point] = []
+    route = []
     visited.visit(start, route)
 
     q = deque([start])
@@ -306,7 +304,7 @@ def solve_route(start, goal, floor) -> Optional[List[Point]]:  # type: ignore
 
 class PartitionCands(Floor):
     def __init__(self, MARGIN):
-        self.tiles: List[List[Tile]] = self.create_empty_tiles(MARGIN)
+        self.tiles = self.create_empty_tiles(MARGIN)
 
     def create_empty_tiles(self, MARGIN):
         tiles = []
@@ -316,7 +314,7 @@ class PartitionCands(Floor):
             tiles.append(row)
         return tiles
 
-    def update_tile(self, point: Point, tile: Tile):
+    def update_tile(self, point, tile):
         row = point.x
         col = point.y
         self.tiles[row][col] = tile
@@ -343,8 +341,8 @@ partition_cands = PartitionCands(MARGIN)
 
 class HumansCount(Floor):
     def __init__(self, margin, humans):
-        self.margin: int = margin
-        self.counts: List[List[int]] = self.create_zeros()
+        self.margin = margin
+        self.counts = self.create_zeros()
         self.update_human_counts(humans)
 
     def create_zeros(self):
@@ -355,7 +353,7 @@ class HumansCount(Floor):
             counts.append(row)
         return counts
 
-    def add_one(self, point: Point):
+    def add_one(self, point):
         row = point.x
         col = point.y
         self.counts[row][col] += 1
@@ -372,8 +370,8 @@ class HumansCount(Floor):
 
 class Visited(Floor):
     def __init__(self, margin):
-        self.margin: int = margin
-        self.counts: List[List[int]] = self.create_zeros()
+        self.margin = margin
+        self.counts = self.create_zeros()
 
     def create_zeros(self):
         counts = []
@@ -383,12 +381,12 @@ class Visited(Floor):
             counts.append(row)
         return counts
 
-    def add_one(self, point: Point):
+    def add_one(self, point):
         row = point.x
         col = point.y
         self.counts[row][col] += 1
 
-    def is_visited(self, point: Point) -> bool:
+    def is_visited(self, point):
         row = point.x
         col = point.y
         return self.counts[row][col] > 0
@@ -396,23 +394,23 @@ class Visited(Floor):
 
 class VisitedSteps(Floor):
     def __init__(self, margin):
-        self.margin: int = margin
-        self.cells: List[List[Set[Steps]]] = self.create_nones()
+        self.margin = margin
+        self.cells = self.create_nones()
 
     def create_nones(self):
         counts = []
         square_len = FLOOR_LEN + self.margin * 2
         for _ in range(square_len):
-            row: List[Set[Steps]] = [set() for _ in range(square_len)]
+            row = [set() for _ in range(square_len)]
             counts.append(row)
         return counts
 
-    def visits(self, point: Point, steps: Steps):
+    def visits(self, point, steps):
         row = point.x
         col = point.y
         self.cells[row][col].add(steps)
 
-    def is_visited_with_steps(self, point: Point, steps: Steps) -> bool:
+    def is_visited_with_steps(self, point, steps):
         row = point.x
         col = point.y
         return steps in self.cells[row][col]
@@ -457,10 +455,10 @@ class Pet:
             return False
         return self.id == other.id
 
-    def __hash__(self) -> int:
+    def __hash__(self):
         return self.id
 
-    def is_free(self, humans) -> bool:
+    def is_free(self, humans):
         THRESHOLD_POINTS = 50
         can_go_cnt = 0
         visited = Visited(MARGIN)
@@ -579,7 +577,7 @@ class Human:
                 # 近いなら毎ターンsolveする
                 self.solve_route_turn = turn + 1
 
-    def sort_directions(self) -> List[PointDiff]:
+    def sort_directions(self):
         """directionを選ぶ関数
         絶対値が大きいdirectionを選びやすい
 
@@ -589,8 +587,8 @@ class Human:
         TODO: 待機をどう扱うか
         #"""
 
-        directions: List[PointDiff] = []
-        diff_to_target: PointDiff = self.target.point - self.point  # type: ignore
+        directions = []
+        diff_to_target = self.target.point - self.point  # type: ignore
 
         # # roleに応じて、ターゲットの上下左右に寄らせる
         # role_dir: PointDiff = list(blockade_conv_table.keys())[self.role]  # type: ignore
@@ -653,7 +651,7 @@ class Human:
 
 
 class Team:
-    def __init__(self, humans: List[Human], target: Optional[Pet] = None):
+    def __init__(self, humans, target=None):
         self.humans = humans
         self.target = target
         self.set_role()
@@ -667,7 +665,7 @@ class Team:
         # TODO: 囲われているペットは無視する
         # TODO: 最短経路を考慮すべきか？
 
-        pet_distance_sum: Dict[Pet, int] = {pet: 0 for pet in pets}
+        pet_distance_sum = {pet: 0 for pet in pets}
 
         for pet in pets:
             for human in self.humans:  # type: ignore
@@ -682,14 +680,14 @@ class Team:
 
 def initial_input():
     N = int(input())
-    pets: List[Pet] = []
+    pets = []
     for i in range(N):
         x, y, t = map(lambda x: int(x), input().split())
         pet = Pet(id=i + 1, kind=Kind(t), point=Point(x - 1 + MARGIN, y - 1 + MARGIN))
         pets.append(pet)
 
     M = int(input())
-    humans: List[Human] = []
+    humans = []
     for i in range(M):
         x, y = map(lambda x: int(x), input().split())
         human = Human(id=i + 1, point=Point(x - 1 + MARGIN, y - 1 + MARGIN))
@@ -738,7 +736,7 @@ def main():
                 #     human.point + dir for dir in blockade_dirs
                 # ]
 
-                blockade_cands: List[Point] = [human.route[0]]
+                blockade_cands = [human.route[0]]
 
                 for blockade_cand in blockade_cands:
                     # その位置に壁やpartitionがなく、人やペットの制約もなければ、partitionを立てる
