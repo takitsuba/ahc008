@@ -580,6 +580,9 @@ class Human:
 
         print(f"# {self.next_move} - {self.point}")
         if self.next_move:
+            # 進む先のtileはPartition候補から消す
+            partition_cands.update_tile(self.next_move, Tile.NOTPARTITION)
+
             next_diff = self.next_move - self.point
             move_char = move_actions_table[next_diff]
             print(f"# {self.next_move} - {self.point}, {self.id}")
@@ -802,7 +805,7 @@ def main():
 
         for human in humans:
             # ターゲットを決める
-            # TODO: 一度決めたらターゲットは当分更新しないべき？
+            # TODO: 一度決めたらターゲットは当分更新しないべきか。囲い途中だったのに出て行ってしまう
             human.select_target(pets)
 
             human.set_status()
@@ -817,8 +820,6 @@ def main():
                 human.think_to_get_out()
                 if len(human.get_out_route) > 0:
                     human.next_move = human.get_out_route.popleft()
-                    # 進む先のtileはPartition候補から消す
-                    partition_cands.update_tile(human.next_move, Tile.NOTPARTITION)
 
             # TODO: 2しか離れてなくても、遠いところに置くことは可能。
             # DANGERにいるときは置ける場所が唯一の通路のため置いてはいけない。
@@ -857,8 +858,6 @@ def main():
                         pass
                     else:
                         human.next_move = move_to_cand
-                        # 進む先のtileはPartition候補から消す
-                        partition_cands.update_tile(human.next_move, Tile.NOTPARTITION)
 
                         # 進む先がDANGERなら、元々いるところ(human.point)が唯一の通路だった。そのためそこはNOTPARTITIONにする。
                         # TODO: 意味あるか不明
