@@ -587,9 +587,8 @@ class Human:
                 priority = kind_to_priority[pet.kind]
                 pets_priority_distances.append((pet, priority, distance))
 
-        pets_priority_distances = sorted(
-            pets_priority_distances, key=lambda x: (x[1], x[2])
-        )
+        # priority無効化
+        pets_priority_distances = sorted(pets_priority_distances, key=lambda x: x[2])
 
         # TODO: 全て捕まえた時の挙動
         if len(pets_priority_distances) > 0:
