@@ -566,18 +566,38 @@ class Human:
         # TODO: 囲われているペットは無視する
         # TODO: 最短経路を考慮すべきか？
         # TODO: 全員使った場合の挙動は？
-        nearest_pet = None
-        min_distance = MAXINT
+        # nearest_pet = None
+        # min_distance = MAXINT
+        pets_priority_distances = []
+
+        # DogとCatの優先順位を下げる
+        kind_to_priority = {
+            Kind.COW: 1,
+            Kind.PIG: 1,
+            Kind.RABBIT: 1,
+            Kind.DOG: 2,
+            Kind.CAT: 2,
+        }
+
         for pet in pets:
             if pet.is_free():
-                d = cal_distance_points(self.point, pet.point)
-                if d < min_distance:
-                    nearest_pet = pet
-                    min_distance = d
-        self.target = nearest_pet
+                distance = cal_distance_points(self.point, pet.point)
+                priority = kind_to_priority[pet.kind]
+                pets_priority_distances.append((pet, priority, distance))
 
-        # petのkindによってblockする距離を変える
-        self.block_dist = kind_to_block_dist[self.target.kind]  # type: ignore
+        pets_priority_distances = sorted(
+            pets_priority_distances, key=lambda x: (x[1], x[2])
+        )
+
+        # TODO: 全て捕まえた時の挙動
+        if len(pets_priority_distances) > 0:
+            self.target = pets_priority_distances[0][0]
+
+            # petのkindによってblockする距離を変える
+            self.block_dist = kind_to_block_dist[self.target.kind]  # type: ignore
+        else:
+            self.target = None
+            self.block_dist = None
 
     def next_action_char(self):
         if self.next_blockade:
@@ -785,15 +805,21 @@ def main():
         for pet in pets:
             pet.update_status(humans)
 
-        team.select_target(pets)
+        # 死んでるpetをtargetにしているhumanがいたらNoneにする
+        for human in humans:
+            # Noneの場合もあるためhuman.targetで確認している
+            if human.target and (human.target.is_free() is False):
+                human.target = None
+
+        # team.select_target(pets)
 
         for human in humans:
             human.refresh()
 
         for human in humans:
-            # ターゲットを決める
-            # TODO: 一度決めたらターゲットは当分更新しないべきか。囲い途中だったのに出て行ってしまう
-            human.select_target(pets)
+            # 一度決めたらターゲットは当分更新しない。囲い途中だったのに出て行ってしまうため
+            if not human.target:
+                human.select_target(pets)
 
             human.set_status()
 
@@ -805,7 +831,13 @@ def main():
 
             if human.status == HumanStatus.GETOUT:
                 human.think_to_get_out()
-                if len(human.get_out_route) > 0:
+                if len(human.get_out_route) > 0 and (
+                    floor.get_tile(human.get_out_route[0])
+                    not in [
+                        Tile.WALL,
+                        Tile.PARTITION,
+                    ]
+                ):
                     human.next_move = human.get_out_route.popleft()
 
             # TODO: 2しか離れてなくても、遠いところに置くことは可能。
