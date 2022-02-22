@@ -460,7 +460,11 @@ class Pet:
     def __hash__(self) -> int:
         return self.id
 
+    def __repr__(self):
+        return f"Pet({self.id}, {self.kind}, {self.point})"
+
     def is_free(self, humans) -> bool:
+        # TODO: free判定をちゃんとやるか、閾値変更
         THRESHOLD_POINTS = 50
         can_go_cnt = 0
         visited = Visited(MARGIN)
@@ -678,6 +682,7 @@ class Team:
         for pet, distance_sum in pet_distance_sum.items():
             if (pet.is_free(self.humans)) & (distance_sum < nearest_distance_sum):
                 self.target = pet
+        print(f"# target: {self.target}")
 
 
 def initial_input():
