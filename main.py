@@ -157,7 +157,7 @@ class Floor:
                 # 下記のpointがwallかpartitionになる。
                 danger_cand = point + diff
                 emptys = self.neighbor_empty(danger_cand)
-                # 周囲を3つ以上WALLかPARTITIONに囲まれていてemptyならdangerに変更
+                # 周囲を3つ以上WALLかPARTITIONかDANGERに囲まれていてemptyならdangerに変更
                 if len(emptys) == 1 & (self.get_tile(danger_cand) == Tile.EMPTY):
                     # WARNING: 無限ループ
                     self.update_tile(danger_cand, Tile.DANGER)
@@ -169,7 +169,7 @@ class Floor:
         emptys: List[Point] = []
         for diff in neighbour_diffs:
             neighbour = point + diff
-            if self.get_tile(neighbour) not in [Tile.WALL, Tile.PARTITION]:
+            if self.get_tile(neighbour) not in [Tile.WALL, Tile.PARTITION, Tile.DANGER]:
                 emptys.append(neighbour)
         return emptys
 
@@ -327,6 +327,18 @@ class PartitionCands(Floor):
         # 開始時点の人がいる場所はNOTPARTITION
         for human in humans:
             self.update_tile(human.point, Tile.NOTPARTITION)
+
+            # 開始時点に人がDANGERにいる場合、そのDANGERに隣接するDANGERとEMPTY(このEMPTYは1つのみか)
+            # にはNOTPARTITION
+            def recur_adjacent_danger(point):
+                if floor.get_tile(point) == Tile.DANGER:
+                    self.update_tile(point, Tile.NOTPARTITION)
+                    for neighbour_diff in neighbour_diffs:
+                        neighbour = point + neighbour_diff
+                        recur_adjacent_danger(neighbour)
+                elif floor.get_tile(point) == Tile.EMPTY:
+                    # EMPTYの場合はNOTPARTITIONにして、再帰は行わない。
+                    self.update_tile(point, Tile.NOTPARTITION)
 
         # 開始時点にペットがいる場所と隣接する場所はNOTPARTITION
         for pet in pets:
@@ -553,9 +565,12 @@ class Human:
             diff = self.next_blockade - self.point
             return blockade_conv_table[diff]
 
+        print(f"# {self.next_move} - {self.point}")
         if self.next_move:
             next_diff = self.next_move - self.point
             move_char = move_actions_table[next_diff]
+            print(f"# {self.next_move} - {self.point}, {self.id}")
+
             return move_char
 
         # 取れる行動がなければ何もしない
@@ -642,7 +657,7 @@ class Human:
             # 近づく
             # Refactor
             if len(self.route) >= 2:
-                next_point = self.route.popleft()
+                next_point = self.route[0]
                 direction = next_point - self.point
                 directions += [direction]
 
@@ -767,7 +782,11 @@ def main():
 
                 for direction in directions:
                     move_to_cand = human.point + direction
-                    if floor.get_tile(move_to_cand) != Tile.EMPTY:
+                    if floor.get_tile(move_to_cand) in [
+                        Tile.WALL,
+                        Tile.PARTITION,
+                        Tile.DANGER,
+                    ]:
                         pass
                     else:
                         human.next_move = move_to_cand
@@ -777,10 +796,15 @@ def main():
                         # 進む先がDANGERなら、元々いるところ(human.point)が唯一の通路だった。そのためそこはNOTPARTITIONにする。
                         # TODO: 意味あるか不明
                         if floor.get_tile(human.next_move) == Tile.DANGER:
-                            partition_cands.update_tile(human.point, Tile.NOTPARTITION)
+                            floor.update_tile(human.point, Tile.NOTPARTITION)
 
                         break
 
+                # routeを参照するタイミングと削除するタイミングが違うのがわかりにくい
+                if (len(human.route) > 0) and (human.next_move == human.route[0]):
+                    _ = human.route.popleft()
+
+            print(f"# {human}")
             action_char = human.next_action_char()
             action_str += action_char
 
