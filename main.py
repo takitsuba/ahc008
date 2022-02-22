@@ -450,11 +450,17 @@ kind_to_block_dist = {
 }
 
 
+class PetStatus(Enum):
+    NORMAL = 0
+    DEAD = 1
+
+
 class Pet:
-    def __init__(self, id, kind, point):
+    def __init__(self, id, kind, point, status=PetStatus.NORMAL):
         self.id = id
         self.kind = kind
         self.point = point
+        self.status = status
 
     def move(self, action_char):
         diff = move_char_to_diff[action_char]
@@ -548,7 +554,7 @@ class Human:
         self.solve_route_turn = solve_route_turn
 
     def __repr__(self):
-        return f"Human({self.id}, {self.point}, status:{self.status}, next_move:{self.next_move}, next_blockade)"
+        return f"Human({self.id}, {self.point}, target: {self.target}, status:{self.status}, next_move:{self.next_move}, next_blockade)"
 
     def select_target(self, pets):
         # self.target = self.team.target  # type:ignore
