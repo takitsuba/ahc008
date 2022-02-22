@@ -734,17 +734,19 @@ class Team:
         """平均して最も近いpetを選ぶ"""
         # TODO: 囲われているペットは無視する
         # TODO: 最短経路を考慮すべきか？
+        # TODO: 全部囲われた時の挙動は？
 
         pet_distance_sum: Dict[Pet, int] = {pet: 0 for pet in pets}
 
         for pet in pets:
-            for human in self.humans:  # type: ignore
-                distance = cal_distance(human, pet)
-                pet_distance_sum[pet] += distance
+            if pet.is_free():
+                for human in self.humans:  # type: ignore
+                    distance = cal_distance(human, pet)
+                    pet_distance_sum[pet] += distance
 
         nearest_distance_sum = MAXINT
         for pet, distance_sum in pet_distance_sum.items():
-            if (pet.is_free()) and (distance_sum < nearest_distance_sum):
+            if distance_sum < nearest_distance_sum:
                 self.target = pet
                 nearest_distance_sum = distance_sum
         print(f"# target: {self.target}")
