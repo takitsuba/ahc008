@@ -2,6 +2,14 @@
 lint:
 	poetry run black main.py local_test.py
 
+.PHONY: test_with_count
+test_with_count:
+	poetry run python local_test.py --count $(COUNT)
+
+.PHONY: test_with_id
+test_with_id:
+	poetry run python local_test.py --id $(ID)
+
 .PHONY: test
 test:
 	poetry run python local_test.py --count 10
