@@ -527,6 +527,9 @@ class Human:
         self.route = route if route else deque()
         self.solve_route_turn = solve_route_turn
 
+    def __repr__(self):
+        return f"Human({self.id}, {self.point})"
+
     def select_target(self, pets):
         # self.target = self.team.target  # type:ignore
 
@@ -662,6 +665,9 @@ class Team:
         self.humans = humans
         self.target = target
         self.set_role()
+
+    def __repr__(self):
+        return f"Team({self.humans}, {self.target})"
 
     def set_role(self):
         for i, human in enumerate(self.humans):
