@@ -16,8 +16,6 @@ def test_once(params):
     else:
         command = f"cd tools && cargo run --release --bin tester poetry run python3 ../main.py < in/{file_num}.txt > out/{file_num}.txt"
 
-    print(command)
-
     score_str = subprocess.getoutput(command)
 
     seconds = time.time() - start
@@ -25,14 +23,14 @@ def test_once(params):
     score = int(score_str.split()[-1])
     if score == 0:
         print(score_str)
-    return score, seconds
+    return file_num, score, seconds
 
 
 def local_test(test_cnt, disable_tqdm, no_hints):
     params_list = [(format(i, "0>4"), no_hints) for i in range(test_cnt)]
 
     with Pool(processes=4) as p:
-        scores_and_seconds = list(
+        results = list(
             tqdm(
                 p.imap(func=test_once, iterable=params_list),
                 total=test_cnt,
@@ -40,11 +38,18 @@ def local_test(test_cnt, disable_tqdm, no_hints):
             )
         )
 
-    scores = [score for score, _ in scores_and_seconds]
-    seconds = [seconds for _, seconds in scores_and_seconds]
+    file_nums = []
+    scores = []
+    secondss = []
+
+    for file_num, score, seconds in results:
+        print(file_num, score)
+        file_nums.append(file_num)
+        scores.append(score)
+        secondss.append(seconds)
 
     print(
-        f"mean score: {sum(scores) / len(scores)}, mean seconds: {sum(seconds) / len(seconds)}"
+        f"mean score: {sum(scores) / len(scores)}, mean seconds: {sum(secondss) / len(secondss)}"
     )
 
 
