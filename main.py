@@ -818,9 +818,8 @@ def main():
             human.refresh()
 
         for human in humans:
-            # 一度決めたらターゲットは当分更新しない。囲い途中だったのに出て行ってしまうため
-            if not human.target:
-                human.select_target(pets)
+
+            human.select_target(pets)
 
             human.set_status()
 
