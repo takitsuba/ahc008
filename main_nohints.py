@@ -140,28 +140,31 @@ class Floor:
     def is_safe(self, point):
         return self.get_tile(point) not in [Tile.WALL, Tile.PARTITION]
 
+    def is_safe_completely(self, point):
+        return self.get_tile(point) not in [Tile.WALL, Tile.PARTITION, Tile.DANGER]
+
     def update_tile(self, point, tile):
         row = point.x
         col = point.y
         self.tiles[row][col] = tile
-        self.update_danger(point, tile)
+        if tile in [Tile.WALL, Tile.PARTITION, Tile.DANGER]:
+            self.update_danger(point, tile)
 
     def update_danger(self, point, tile):
         # 行くべきでない場所を更新する
         # 何かしらで埋められた場合は、行くべきでない場所が増えたか確認し更新する
-        if tile in [Tile.WALL, Tile.PARTITION]:
-            for diff in neighbour_diffs:
-                # 更新する場所の周囲がdangerになる可能性
-                # 下記のpointがwallかpartitionになる。
-                danger_cand = point + diff
-                emptys = self.neighbor_empty(danger_cand)
-                # 周囲を3つ以上WALLかPARTITIONかDANGERに囲まれていてemptyならdangerに変更
-                if len(emptys) == 1 & (self.get_tile(danger_cand) == Tile.EMPTY):
-                    # WARNING: 無限ループ
-                    self.update_tile(danger_cand, Tile.DANGER)
+        for diff in neighbour_diffs:
+            # 更新する場所の周囲がdangerになる可能性
+            # 下記のpointがwallかpartitionになる。
+            danger_cand = point + diff
+            emptys = self.neighbor_empty(danger_cand)
+            # 周囲を3つ以上WALLかPARTITIONかDANGERに囲まれていてemptyならdangerに変更
+            if len(emptys) == 1 and (self.get_tile(danger_cand) == Tile.EMPTY):
+                # WARNING: 無限ループ
+                self.update_tile(danger_cand, Tile.DANGER)
 
     def neighbor_empty(self, point):
-        """受け取ったpointの隣でwall, partitionでないものを返す
+        """受け取ったpointの隣でwall, partition, dangerでないものを返す
         これが1つしか返さなければ、与えたpointの唯一の通路になる
         """
         emptys = []
@@ -512,11 +515,18 @@ class Pet:
         return check if check else False
 
 
+class HumanStatus(Enum):
+    NORMAL = 0
+    GETOUT = 1
+    DEAD = 2
+
+
 class Human:
     def __init__(
         self,
         id,
         point,
+        status=HumanStatus.NORMAL,
         team=None,
         role=None,
         target=None,
@@ -524,10 +534,12 @@ class Human:
         next_blockade=None,
         next_move=None,
         route=None,
+        get_out_route=None,
         solve_route_turn=0,
     ):
         self.id = id
         self.point = point
+        self.status = status
         self.team = team
         self.role = role
         self.target = target
@@ -535,10 +547,11 @@ class Human:
         self.next_blockade = next_blockade
         self.next_move = next_move
         self.route = route if route else deque()
+        self.get_out_route = get_out_route if get_out_route else deque()
         self.solve_route_turn = solve_route_turn
 
     def __repr__(self):
-        return f"Human({self.id}, {self.point})"
+        return f"Human({self.id}, {self.point}, status:{self.status}, next_move:{self.next_move}, next_blockade)"
 
     def select_target(self, pets):
         # self.target = self.team.target  # type:ignore
@@ -574,10 +587,16 @@ class Human:
         # 取れる行動がなければ何もしない
         return "."
 
-    def refresh(self, pets):
+    def set_status(self):
+        # DANGERにいるなら脱出モード
+        if floor.get_tile(self.point) == Tile.DANGER:
+            self.status = HumanStatus.GETOUT
+        else:
+            self.status = HumanStatus.NORMAL
+
+    def refresh(self):
         self.next_blockade = None
         self.next_move = None
-        # self.select_target(pets)
 
     def think_route(self, turn):
         # humanの solve_turn を過ぎていたら solveし直す
@@ -599,6 +618,46 @@ class Human:
             else:
                 # 近いなら毎ターンsolveする
                 self.solve_route_turn = turn + 1
+
+    def think_to_get_out(self):
+        route = self.get_route_to_empty()
+        if route:
+            self.get_out_route = deque(route)
+        else:
+            # 逃げ出す道がないなら死んでいる
+            self.status = HumanStatus.DEAD
+
+    def get_route_to_empty(self):  # type: ignore
+        """EMPTYまでの経路のpointをリストで返す
+        STARTは含まず、GOALは含む。
+        STARTとGOALが同じ場合は空のリストを返す。
+        """
+        visited = VisitedFloor(floor_len=FLOOR_LEN, margin=MARGIN)
+
+        route = []
+
+        start = self.point
+        visited.visit(start, route)
+
+        q = deque([start])
+
+        while q:
+            now = q.popleft()
+            # その場所がEMPTYなら完了
+            if floor.get_tile(now) == Tile.EMPTY:
+                return visited.get_route(now)
+
+            for diff in neighbour_diffs:
+                neighbour = now + diff
+
+                if (not visited.is_visited(neighbour)) and (
+                    floor.get_tile(neighbour) in [Tile.DANGER, Tile.EMPTY]
+                ):
+                    q.append(neighbour)
+                    route = visited.get_route(now) + [neighbour]
+                    visited.visit(neighbour, route)
+
+        return None
 
     def sort_directions(self):
         """directionを選ぶ関数
@@ -736,14 +795,15 @@ def main():
 
         team.select_target(pets)
 
-        # humanの意志をリフレッシュ
         for human in humans:
-            human.refresh(pets)
+            human.refresh()
 
         for human in humans:
             # ターゲットを決める
             # TODO: 一度決めたらターゲットは当分更新しないべき？
             human.select_target(pets)
+
+            human.set_status()
 
             # turn数に応じてrouteを引き直す
             # Refactor
@@ -751,9 +811,16 @@ def main():
 
             distance_between_human_target = len(human.route)
 
+            if human.status == HumanStatus.GETOUT:
+                human.think_to_get_out()
+                if len(human.get_out_route) > 0:
+                    human.next_move = human.get_out_route.popleft()
+                    # 進む先のtileはPartition候補から消す
+                    partition_cands.update_tile(human.next_move, Tile.NOTPARTITION)
+
             # TODO: 2しか離れてなくても、遠いところに置くことは可能。
             # DANGERにいるときは置ける場所が唯一の通路のため置いてはいけない。
-            if (3 <= distance_between_human_target <= human.block_dist) & (
+            elif (3 <= distance_between_human_target <= human.block_dist) & (
                 floor.get_tile(human.point) != Tile.DANGER
             ):
                 # 優先度高いものほど左にする
@@ -805,6 +872,8 @@ def main():
             print(f"# {human}")
             action_char = human.next_action_char()
             action_str += action_char
+
+        print(f"# {floor}")
 
         # 人間の行動を出力
         print(action_str, flush=True)
