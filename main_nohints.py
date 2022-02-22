@@ -22,7 +22,7 @@ class PointDiff:
     def __eq__(self, other):
         if not isinstance(other, PointDiff):
             return False
-        return (self.x == other.x) & (self.y == other.y)
+        return (self.x == other.x) and (self.y == other.y)
 
     def __hash__(self):
         return hash((self.x, self.y))
@@ -46,7 +46,7 @@ class Point:
     def __eq__(self, other):
         if not isinstance(other, Point):
             return False
-        return (self.x == other.x) & (self.y == other.y)
+        return (self.x == other.x) and (self.y == other.y)
 
     def __hash__(self):
         return hash((self.x, self.y))
@@ -117,11 +117,6 @@ class Floor:
         for _ in range(margin):
             row = [Tile.WALL] * (floor_len + margin * 2)
             self.tiles.append(row)
-
-        # 角はDANGER
-        # for row in self.tiles[MARGIN : MARGIN + DANGER_CORNER_WIDTH]:
-        #     for col in range(MARGIN, MARGIN + DANGER_CORNER_WIDTH):
-        #         self.tiles[row][col] = Tile.DANGER
 
     def __repr__(self):
         tiles_txt = ""
@@ -453,11 +448,17 @@ kind_to_block_dist = {
 }
 
 
+class PetStatus(Enum):
+    NORMAL = 0
+    DEAD = 1
+
+
 class Pet:
-    def __init__(self, id, kind, point):
+    def __init__(self, id, kind, point, status=PetStatus.NORMAL):
         self.id = id
         self.kind = kind
         self.point = point
+        self.status = status
 
     def move(self, action_char):
         diff = move_char_to_diff[action_char]
@@ -476,7 +477,7 @@ class Pet:
     def __repr__(self):
         return f"Pet({self.id}, {self.kind}, {self.point})"
 
-    def is_free(self, humans):
+    def update_status(self, humans):
         # TODO: free判定をちゃんとやるか、閾値変更
         THRESHOLD_POINTS = 50
         can_go_cnt = 0
@@ -510,9 +511,14 @@ class Pet:
                         return True
 
         check = free_dfs(self.point)
+        print(f"# {self.__repr__()}, can_go_count: {can_go_cnt}, check: {check}")
 
-        # checkはNoneのことがある。その場合はFalse
-        return check if check else False
+        if check is not True:
+            # checkはNoneのことがある。その場合はFalse
+            self.status = PetStatus.DEAD
+
+    def is_free(self):
+        return self.status == PetStatus.NORMAL
 
 
 class HumanStatus(Enum):
@@ -551,7 +557,7 @@ class Human:
         self.solve_route_turn = solve_route_turn
 
     def __repr__(self):
-        return f"Human({self.id}, {self.point}, status:{self.status}, next_move:{self.next_move}, next_blockade)"
+        return f"Human({self.id}, {self.point}, target: {self.target}, status:{self.status}, next_move:{self.next_move}, next_blockade)"
 
     def select_target(self, pets):
         # self.target = self.team.target  # type:ignore
@@ -559,13 +565,15 @@ class Human:
         # 最も近いペットをターゲットにする
         # TODO: 囲われているペットは無視する
         # TODO: 最短経路を考慮すべきか？
+        # TODO: 全員使った場合の挙動は？
         nearest_pet = None
         min_distance = MAXINT
         for pet in pets:
-            d = cal_distance_points(self.point, pet.point)
-            if d < min_distance:
-                nearest_pet = pet
-                min_distance = d
+            if pet.is_free():
+                d = cal_distance_points(self.point, pet.point)
+                if d < min_distance:
+                    nearest_pet = pet
+                    min_distance = d
         self.target = nearest_pet
 
         # petのkindによってblockする距離を変える
@@ -578,6 +586,9 @@ class Human:
 
         print(f"# {self.next_move} - {self.point}")
         if self.next_move:
+            # 進む先のtileはPartition候補から消す
+            partition_cands.update_tile(self.next_move, Tile.NOTPARTITION)
+
             next_diff = self.next_move - self.point
             move_char = move_actions_table[next_diff]
             print(f"# {self.next_move} - {self.point}, {self.id}")
@@ -672,23 +683,6 @@ class Human:
         directions = []
         diff_to_target = self.target.point - self.point  # type: ignore
 
-        # # roleに応じて、ターゲットの上下左右に寄らせる
-        # role_dir: PointDiff = list(blockade_conv_table.keys())[self.role]  # type: ignore
-        # if role_dir.x != 0:
-        #     # targetとの相対位置と担当が異なる場合
-        #     # H→P　といた時、 diff_to_target は (0, 1)。
-        #     # このHの担当が (0, -1) なら、現状正しい。
-        #     # そのため掛け算したときに符号が正なら修正する必要
-        #     if diff_to_target.x * role_dir.x > 0:
-        #         # 担当方向に進める
-        #         directions.append(role_dir)
-        # else:
-        #     # targetとの相対位置と担当が異なる場合
-        #     # TODO: refactor
-        #     if diff_to_target.y * role_dir.y < 0:
-        #         # 担当方向に進める
-        #         directions.append(role_dir)
-
         distance = abs(diff_to_target.x) + abs(diff_to_target.y)
         random.shuffle(neighbour_diffs)
 
@@ -720,15 +714,6 @@ class Human:
 
             directions += neighbour_diffs
 
-            # if random.randint(0, distance) < abs(diff_to_target.x):
-            #     directions += [
-            #         PointDiff(1 if diff_to_target.x > 0 else -1, 0)
-            #     ] + neighbour_diffs
-            # else:
-            #     directions += [
-            #         PointDiff(0, 1 if diff_to_target.y > 0 else -1)
-            #     ] + neighbour_diffs
-
         return directions
 
 
@@ -749,18 +734,21 @@ class Team:
         """平均して最も近いpetを選ぶ"""
         # TODO: 囲われているペットは無視する
         # TODO: 最短経路を考慮すべきか？
+        # TODO: 全部囲われた時の挙動は？
 
         pet_distance_sum = {pet: 0 for pet in pets}
 
         for pet in pets:
-            for human in self.humans:  # type: ignore
-                distance = cal_distance(human, pet)
-                pet_distance_sum[pet] += distance
+            if pet.is_free():
+                for human in self.humans:  # type: ignore
+                    distance = cal_distance(human, pet)
+                    pet_distance_sum[pet] += distance
 
         nearest_distance_sum = MAXINT
         for pet, distance_sum in pet_distance_sum.items():
-            if (pet.is_free(self.humans)) & (distance_sum < nearest_distance_sum):
+            if distance_sum < nearest_distance_sum:
                 self.target = pet
+                nearest_distance_sum = distance_sum
         print(f"# target: {self.target}")
 
 
@@ -793,6 +781,10 @@ def main():
         action_str = ""
         partition_cands.refresh(humans, pets)
 
+        # 死んでるpetがいるか確認
+        for pet in pets:
+            pet.update_status(humans)
+
         team.select_target(pets)
 
         for human in humans:
@@ -800,7 +792,7 @@ def main():
 
         for human in humans:
             # ターゲットを決める
-            # TODO: 一度決めたらターゲットは当分更新しないべき？
+            # TODO: 一度決めたらターゲットは当分更新しないべきか。囲い途中だったのに出て行ってしまう
             human.select_target(pets)
 
             human.set_status()
@@ -815,26 +807,18 @@ def main():
                 human.think_to_get_out()
                 if len(human.get_out_route) > 0:
                     human.next_move = human.get_out_route.popleft()
-                    # 進む先のtileはPartition候補から消す
-                    partition_cands.update_tile(human.next_move, Tile.NOTPARTITION)
 
             # TODO: 2しか離れてなくても、遠いところに置くことは可能。
             # DANGERにいるときは置ける場所が唯一の通路のため置いてはいけない。
-            elif (3 <= distance_between_human_target <= human.block_dist) & (
+            elif (3 <= distance_between_human_target <= human.block_dist) and (
                 floor.get_tile(human.point) != Tile.DANGER
             ):
-                # 優先度高いものほど左にする
-                # get_dirs_priority
-                # blockade_dirs = get_dirs_priority(human.point, human.target.point)
-                # blockade_cands: List[Point] = [
-                #     human.point + dir for dir in blockade_dirs
-                # ]
 
                 blockade_cands = [human.route[0]]
 
                 for blockade_cand in blockade_cands:
                     # その位置に壁やpartitionがなく、人やペットの制約もなければ、partitionを立てる
-                    if (floor.get_tile(blockade_cand) == Tile.EMPTY) & (
+                    if (floor.get_tile(blockade_cand) == Tile.EMPTY) and (
                         partition_cands.get_tile(blockade_cand) == Tile.EMPTY
                     ):
                         human.next_blockade = blockade_cand
@@ -855,8 +839,6 @@ def main():
                         pass
                     else:
                         human.next_move = move_to_cand
-                        # 進む先のtileはPartition候補から消す
-                        partition_cands.update_tile(human.next_move, Tile.NOTPARTITION)
 
                         # 進む先がDANGERなら、元々いるところ(human.point)が唯一の通路だった。そのためそこはNOTPARTITIONにする。
                         # TODO: 意味あるか不明
