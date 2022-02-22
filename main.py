@@ -480,6 +480,9 @@ class Pet:
         return f"Pet({self.id}, {self.kind}, {self.point})"
 
     def is_free(self, humans) -> bool:
+        if self.status == PetStatus.DEAD:
+            return False
+
         # TODO: free判定をちゃんとやるか、閾値変更
         THRESHOLD_POINTS = 50
         can_go_cnt = 0
@@ -513,9 +516,15 @@ class Pet:
                         return True
 
         check = free_dfs(self.point)
+        print(f"# {self.__repr__()}, can_go_count: {can_go_cnt}, check: {check}")
 
-        # checkはNoneのことがある。その場合はFalse
-        return check if check else False
+        # 死んだならstatusを変更する
+        if check is True:
+            return True
+        else:
+            # checkはNoneのことがある。その場合はFalse
+            self.status = PetStatus.DEAD
+            return False
 
 
 class HumanStatus(Enum):
@@ -741,6 +750,7 @@ class Team:
         for pet, distance_sum in pet_distance_sum.items():
             if (pet.is_free(self.humans)) and (distance_sum < nearest_distance_sum):
                 self.target = pet
+                nearest_distance_sum = distance_sum
         print(f"# target: {self.target}")
 
 
