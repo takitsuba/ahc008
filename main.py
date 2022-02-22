@@ -775,8 +775,9 @@ def main():
                         partition_cands.update_tile(human.next_move, Tile.NOTPARTITION)
 
                         # 進む先がDANGERなら、元々いるところ(human.point)が唯一の通路だった。そのためそこはNOTPARTITIONにする。
+                        # TODO: 意味あるか不明
                         if floor.get_tile(human.next_move) == Tile.DANGER:
-                            floor.update_tile(human.point, Tile.NOTPARTITION)
+                            partition_cands.update_tile(human.point, Tile.NOTPARTITION)
 
                         break
 
