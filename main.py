@@ -24,7 +24,7 @@ class PointDiff:
     def __eq__(self, other):
         if not isinstance(other, PointDiff):
             return False
-        return (self.x == other.x) & (self.y == other.y)
+        return (self.x == other.x) and (self.y == other.y)
 
     def __hash__(self):
         return hash((self.x, self.y))
@@ -48,7 +48,7 @@ class Point:
     def __eq__(self, other):
         if not isinstance(other, Point):
             return False
-        return (self.x == other.x) & (self.y == other.y)
+        return (self.x == other.x) and (self.y == other.y)
 
     def __hash__(self) -> int:
         return hash((self.x, self.y))
@@ -739,7 +739,7 @@ class Team:
 
         nearest_distance_sum = MAXINT
         for pet, distance_sum in pet_distance_sum.items():
-            if (pet.is_free(self.humans)) & (distance_sum < nearest_distance_sum):
+            if (pet.is_free(self.humans)) and (distance_sum < nearest_distance_sum):
                 self.target = pet
         print(f"# target: {self.target}")
 
@@ -798,7 +798,7 @@ def main():
 
             # TODO: 2しか離れてなくても、遠いところに置くことは可能。
             # DANGERにいるときは置ける場所が唯一の通路のため置いてはいけない。
-            elif (3 <= distance_between_human_target <= human.block_dist) & (
+            elif (3 <= distance_between_human_target <= human.block_dist) and (
                 floor.get_tile(human.point) != Tile.DANGER
             ):
 
@@ -806,7 +806,7 @@ def main():
 
                 for blockade_cand in blockade_cands:
                     # その位置に壁やpartitionがなく、人やペットの制約もなければ、partitionを立てる
-                    if (floor.get_tile(blockade_cand) == Tile.EMPTY) & (
+                    if (floor.get_tile(blockade_cand) == Tile.EMPTY) and (
                         partition_cands.get_tile(blockade_cand) == Tile.EMPTY
                     ):
                         human.next_blockade = blockade_cand
