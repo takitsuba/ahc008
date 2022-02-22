@@ -833,7 +833,13 @@ def main():
 
             if human.status == HumanStatus.GETOUT:
                 human.think_to_get_out()
-                if len(human.get_out_route) > 0:
+                if len(human.get_out_route) > 0 and (
+                    floor.get_tile(human.get_out_route[0])
+                    not in [
+                        Tile.WALL,
+                        Tile.PARTITION,
+                    ]
+                ):
                     human.next_move = human.get_out_route.popleft()
 
             # TODO: 2しか離れてなくても、遠いところに置くことは可能。
