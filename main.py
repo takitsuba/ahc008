@@ -567,13 +567,15 @@ class Human:
         # 最も近いペットをターゲットにする
         # TODO: 囲われているペットは無視する
         # TODO: 最短経路を考慮すべきか？
+        # TODO: 全員使った場合の挙動は？
         nearest_pet = None
         min_distance = MAXINT
         for pet in pets:
-            d = cal_distance_points(self.point, pet.point)
-            if d < min_distance:
-                nearest_pet = pet
-                min_distance = d
+            if pet.is_free():
+                d = cal_distance_points(self.point, pet.point)
+                if d < min_distance:
+                    nearest_pet = pet
+                    min_distance = d
         self.target = nearest_pet
 
         # petのkindによってblockする距離を変える
