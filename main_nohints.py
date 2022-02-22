@@ -458,7 +458,11 @@ class Pet:
     def __hash__(self):
         return self.id
 
+    def __repr__(self):
+        return f"Pet({self.id}, {self.kind}, {self.point})"
+
     def is_free(self, humans):
+        # TODO: free判定をちゃんとやるか、閾値変更
         THRESHOLD_POINTS = 50
         can_go_cnt = 0
         visited = Visited(MARGIN)
@@ -522,21 +526,22 @@ class Human:
         self.solve_route_turn = solve_route_turn
 
     def select_target(self, pets):
-        self.target = self.team.target  # type:ignore
+        # self.target = self.team.target  # type:ignore
+
+        # 最も近いペットをターゲットにする
+        # TODO: 囲われているペットは無視する
+        # TODO: 最短経路を考慮すべきか？
+        nearest_pet = None
+        min_distance = MAXINT
+        for pet in pets:
+            d = cal_distance_points(self.point, pet.point)
+            if d < min_distance:
+                nearest_pet = pet
+                min_distance = d
+        self.target = nearest_pet
 
         # petのkindによってblockする距離を変える
         self.block_dist = kind_to_block_dist[self.target.kind]  # type: ignore
-
-        # # 最も近いペットをターゲットにする
-        # # TODO: 囲われているペットは無視する
-        # # TODO: 最短経路を考慮すべきか？
-        # nearest_pet = None
-        # min_distance = 100
-        # for pet in pets:
-        #     d = cal_distance_points(self.point, pet.point)
-        #     if d < min_distance:
-        #         nearest_pet = pet
-        # self.target = nearest_pet
 
     def next_action_char(self):
         if self.next_blockade:
@@ -554,7 +559,7 @@ class Human:
     def refresh(self, pets):
         self.next_blockade = None
         self.next_move = None
-        self.select_target(pets)
+        # self.select_target(pets)
 
     def think_route(self, turn):
         # humanの solve_turn を過ぎていたら solveし直す
@@ -676,6 +681,7 @@ class Team:
         for pet, distance_sum in pet_distance_sum.items():
             if (pet.is_free(self.humans)) & (distance_sum < nearest_distance_sum):
                 self.target = pet
+        print(f"# target: {self.target}")
 
 
 def initial_input():
