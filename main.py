@@ -94,7 +94,7 @@ class Tile(Enum):
     EMPTY = 0
     WALL = 1  # 周囲の壁
     PARTITION = 2
-    NOTUSE = 3
+    NOTPARTITION = 3
     DANGER = 4
 
     def __str__(self):
@@ -324,18 +324,18 @@ class PartitionCands(Floor):
     def refresh(self, humans, pets):
         self.tiles = self.create_empty_tiles(MARGIN)
 
-        # 開始時点の人がいる場所はNOTUSE
+        # 開始時点の人がいる場所はNOTPARTITION
         for human in humans:
-            self.update_tile(human.point, Tile.NOTUSE)
+            self.update_tile(human.point, Tile.NOTPARTITION)
 
-        # 開始時点にペットがいる場所と隣接する場所はNOTUSE
+        # 開始時点にペットがいる場所と隣接する場所はNOTPARTITION
         for pet in pets:
-            self.update_tile(pet.point, Tile.NOTUSE)
+            self.update_tile(pet.point, Tile.NOTPARTITION)
 
             # 隣接する場所
             for neighbour_diff in neighbour_diffs:
                 neighbour_point = pet.point + neighbour_diff
-                self.update_tile(neighbour_point, Tile.NOTUSE)
+                self.update_tile(neighbour_point, Tile.NOTPARTITION)
 
 
 partition_cands = PartitionCands(MARGIN)
@@ -772,11 +772,11 @@ def main():
                     else:
                         human.next_move = move_to_cand
                         # 進む先のtileはPartition候補から消す
-                        partition_cands.update_tile(human.next_move, Tile.NOTUSE)
+                        partition_cands.update_tile(human.next_move, Tile.NOTPARTITION)
 
-                        # 進む先がDANGERなら、元々いるところ(human.point)が唯一の通路だった。そのためそこはNOTUSEにする。
+                        # 進む先がDANGERなら、元々いるところ(human.point)が唯一の通路だった。そのためそこはNOTPARTITIONにする。
                         if floor.get_tile(human.next_move) == Tile.DANGER:
-                            floor.update_tile(human.point, Tile.NOTUSE)
+                            floor.update_tile(human.point, Tile.NOTPARTITION)
 
                         break
 
