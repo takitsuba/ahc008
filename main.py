@@ -120,11 +120,6 @@ class Floor:
             row = [Tile.WALL] * (floor_len + margin * 2)
             self.tiles.append(row)
 
-        # 角はDANGER
-        # for row in self.tiles[MARGIN : MARGIN + DANGER_CORNER_WIDTH]:
-        #     for col in range(MARGIN, MARGIN + DANGER_CORNER_WIDTH):
-        #         self.tiles[row][col] = Tile.DANGER
-
     def __repr__(self):
         tiles_txt = ""
         for row in self.tiles:
@@ -677,23 +672,6 @@ class Human:
         directions: List[PointDiff] = []
         diff_to_target: PointDiff = self.target.point - self.point  # type: ignore
 
-        # # roleに応じて、ターゲットの上下左右に寄らせる
-        # role_dir: PointDiff = list(blockade_conv_table.keys())[self.role]  # type: ignore
-        # if role_dir.x != 0:
-        #     # targetとの相対位置と担当が異なる場合
-        #     # H→P　といた時、 diff_to_target は (0, 1)。
-        #     # このHの担当が (0, -1) なら、現状正しい。
-        #     # そのため掛け算したときに符号が正なら修正する必要
-        #     if diff_to_target.x * role_dir.x > 0:
-        #         # 担当方向に進める
-        #         directions.append(role_dir)
-        # else:
-        #     # targetとの相対位置と担当が異なる場合
-        #     # TODO: refactor
-        #     if diff_to_target.y * role_dir.y < 0:
-        #         # 担当方向に進める
-        #         directions.append(role_dir)
-
         distance = abs(diff_to_target.x) + abs(diff_to_target.y)
         random.shuffle(neighbour_diffs)
 
@@ -724,15 +702,6 @@ class Human:
                 directions += [direction]
 
             directions += neighbour_diffs
-
-            # if random.randint(0, distance) < abs(diff_to_target.x):
-            #     directions += [
-            #         PointDiff(1 if diff_to_target.x > 0 else -1, 0)
-            #     ] + neighbour_diffs
-            # else:
-            #     directions += [
-            #         PointDiff(0, 1 if diff_to_target.y > 0 else -1)
-            #     ] + neighbour_diffs
 
         return directions
 
@@ -826,12 +795,6 @@ def main():
             elif (3 <= distance_between_human_target <= human.block_dist) & (
                 floor.get_tile(human.point) != Tile.DANGER
             ):
-                # 優先度高いものほど左にする
-                # get_dirs_priority
-                # blockade_dirs = get_dirs_priority(human.point, human.target.point)
-                # blockade_cands: List[Point] = [
-                #     human.point + dir for dir in blockade_dirs
-                # ]
 
                 blockade_cands: List[Point] = [human.route[0]]
 
