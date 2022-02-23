@@ -476,7 +476,7 @@ class Pet:
         return self.id
 
     def __repr__(self):
-        return f"Pet({self.id}, {self.kind}, {self.point})"
+        return f"Pet({self.id}, {self.kind}, {self.point}, {self.status})"
 
     def update_status(self, humans):
         # TODO: free判定をちゃんとやるか、閾値変更
@@ -512,11 +512,11 @@ class Pet:
                         return True
 
         check = free_dfs(self.point)
-        print(f"# {self.__repr__()}, can_go_count: {can_go_cnt}, check: {check}")
-
         if check is not True:
             # checkはNoneのことがある。その場合はFalse
             self.status = PetStatus.DEAD
+
+        print(f"# {self.__repr__()}, can_go_count: {can_go_cnt}, check: {check}")
 
     def is_free(self) -> bool:
         return self.status == PetStatus.NORMAL
@@ -596,6 +596,7 @@ class Human:
             # petのkindによってblockする距離を変える
             self.block_dist = kind_to_block_dist[self.target.kind]  # type: ignore
         else:
+            # 全て捕まえたとき
             self.target = None
             self.block_dist = None
 
@@ -633,6 +634,9 @@ class Human:
         # humanの solve_turn を過ぎていたら solveし直す
         # routeの次が通行不能になってる場合もsolveし直す
         # Refactor
+
+        print(f"# {self.target}")
+
         route = solve_route(self.point, self.target.point, floor)
         if route is None:
             self.route = deque()
@@ -873,24 +877,28 @@ def main():
 
             human.select_target(pets)
 
-            human.set_status()
+            if human.target is None:
+                # すべて捕まえたとき
+                action_str += "."
+            else:
+                human.set_status()
 
-            # routeがPartitionで埋まってしまったなら、そのrouteを削除する。routeはこのターンに引き直す。
-            if (len(human.route) > 0) and (
-                Tile.PARTITION in [floor.get_tile(p) for p in human.route]
-            ):
-                human.route = deque()
-                human.solve_route_turn = turn
+                # routeがPartitionで埋まってしまったなら、そのrouteを削除する。routeはこのターンに引き直す。
+                if (len(human.route) > 0) and (
+                    Tile.PARTITION in [floor.get_tile(p) for p in human.route]
+                ):
+                    human.route = deque()
+                    human.solve_route_turn = turn
 
-            # turn数に応じてrouteを引き直す
-            if (human.solve_route_turn <= turn) or (len(human.route) == 0):
-                human.think_route(turn)
+                # turn数に応じてrouteを引き直す
+                if (human.solve_route_turn <= turn) or (len(human.route) == 0):
+                    human.think_route(turn)
 
-            human.decide_next_action()
+                human.decide_next_action()
+                action_char = human.next_action_char()
 
-            print(f"# {human}")
-            action_char = human.next_action_char()
-            action_str += action_char
+                print(f"# {human}")
+                action_str += action_char
 
         print(f"# {floor}")
 
