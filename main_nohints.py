@@ -559,7 +559,7 @@ class Human:
         self.solve_route_turn = solve_route_turn
 
     def __repr__(self):
-        return f"Human({self.id}, {self.point}, target: {self.target}, status:{self.status}, next_move:{self.next_move}, next_blockade)"
+        return f"Human({self.id}, {self.point}, target: {self.target}, status:{self.status}, next_move:{self.next_move}, next_blockade: {self.next_blockade}, route: {self.route})"
 
     def select_target(self, pets):
         # self.target = self.team.target  # type:ignore
@@ -606,14 +606,12 @@ class Human:
             diff = self.next_blockade - self.point
             return blockade_conv_table[diff]
 
-        print(f"# {self.next_move} - {self.point}")
         if self.next_move:
             # 進む先のtileはPartition候補から消す
             partition_cands.update_tile(self.next_move, Tile.NOTPARTITION)
 
             next_diff = self.next_move - self.point
             move_char = move_actions_table[next_diff]
-            print(f"# {self.next_move} - {self.point}, {self.id}")
 
             return move_char
 
@@ -770,10 +768,9 @@ class Human:
         _ = free_dfs(self.point)
 
         # 行ける場所が多いなら free
-        print(f"# human_id {self.id}, can_go_count {can_go_cnt}")
         return can_go_cnt >= HUMAN_FREE_POINTS_THRESHOLD
 
-    def decide_next_action(self):
+    def decide_next_action(self, humans):
         if self.status == HumanStatus.GETOUT:
             self.think_to_get_out()
             if len(self.get_out_route) > 0 and (
@@ -795,12 +792,14 @@ class Human:
 
             blockade_cand = self.route[0]
 
-            # 置いても humanがfreeなら置く
-            if self.is_free_if_blockade(blockade_cand):
-                # その位置に壁やpartitionがなく、人やペットの制約もなければ、partitionを立てる
-                if (floor.get_tile(blockade_cand) == Tile.EMPTY) and (
-                    partition_cands.get_tile(blockade_cand) == Tile.EMPTY
-                ):
+            # その位置に壁やpartitionがなく、人やペットの制約もなければ、partitionを立てる
+            if (floor.get_tile(blockade_cand) == Tile.EMPTY) and (
+                partition_cands.get_tile(blockade_cand) == Tile.EMPTY
+            ):
+
+                # 置いても全humanがfreeなら置く
+                # 時間かかりすぎな可能性
+                if all([human.is_free_if_blockade(blockade_cand) for human in humans]):
                     self.next_blockade = blockade_cand
                     floor.update_tile(self.next_blockade, Tile.PARTITION)
                     return
@@ -931,7 +930,7 @@ def main():
                 if (human.solve_route_turn <= turn) or (len(human.route) == 0):
                     human.think_route(turn)
 
-                human.decide_next_action()
+                human.decide_next_action(humans)
                 action_char = human.next_action_char()
 
                 print(f"# {human}")
