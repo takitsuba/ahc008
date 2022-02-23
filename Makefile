@@ -21,7 +21,7 @@ test_nohints:
 
 .PHONY: test_all
 test_all:
-	poetry run python local_test.py --count 1000 --disable_tqdm
+	poetry run python local_test.py --count 1000 --disable_tqdm --process 20
 
 
 .PHONY: strip_hints

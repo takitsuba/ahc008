@@ -26,14 +26,14 @@ def test_once(params):
     return file_num, score, seconds
 
 
-def local_test(test_cnt, file_id, disable_tqdm, no_hints):
+def local_test(test_cnt, file_id, disable_tqdm, no_hints, process):
     if file_id:
         params_list = [(format(file_id, "0>4"), no_hints)]
 
     else:
         params_list = [(format(i, "0>4"), no_hints) for i in range(test_cnt)]
 
-    with Pool(processes=4) as p:
+    with Pool(processes=process) as p:
         results = list(
             tqdm(
                 p.imap(func=test_once, iterable=params_list),
@@ -63,6 +63,7 @@ if __name__ == "__main__":
     parser.add_argument("--id", default=None)
     parser.add_argument("--disable_tqdm", action="store_true")
     parser.add_argument("--no_hints", action="store_true")
+    parser.add_argument("--process", default=4)
 
     args = parser.parse_args()
 
@@ -70,5 +71,6 @@ if __name__ == "__main__":
     file_id = int(args.id) if args.id else None
     disable_tqdm = args.disable_tqdm
     no_hints = args.no_hints
+    process = int(args.process)
 
-    local_test(test_cnt, file_id, disable_tqdm, no_hints)
+    local_test(test_cnt, file_id, disable_tqdm, no_hints, process)
