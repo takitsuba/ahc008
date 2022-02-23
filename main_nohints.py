@@ -526,6 +526,9 @@ class HumanStatus(Enum):
     DEAD = 2
 
 
+HUMAN_FREE_POINTS_THRESHOLD = 50
+
+
 class Human:
     def __init__(
         self,
@@ -735,6 +738,41 @@ class Human:
 
         return directions
 
+    def is_free_if_blockade(self, hypothesis_point):
+        # TODO: free判定をちゃんとやるか、閾値変更
+        can_go_cnt = 0
+        visited = Visited(MARGIN)
+
+        # can_go_cnt を数える
+        def free_dfs(point):
+            nonlocal can_go_cnt
+            if visited.is_visited(point):
+                return None
+            visited.add_one(point)
+
+            can_go_cnt += 1
+            if can_go_cnt >= HUMAN_FREE_POINTS_THRESHOLD:
+                # 閾値を超えたら終了
+                return True
+
+            for neighbour_diff in neighbour_diffs:
+                neighbour = point + neighbour_diff
+
+                # 置く仮定の場所は無いものとする
+                if neighbour == hypothesis_point:
+                    continue
+
+                if floor.get_tile(neighbour) not in [Tile.WALL, Tile.PARTITION]:
+                    check = free_dfs(neighbour)
+                    if check:
+                        return True
+
+        _ = free_dfs(self.point)
+
+        # 行ける場所が多いなら free
+        print(f"# human_id {self.id}, can_go_count {can_go_cnt}")
+        return can_go_cnt >= HUMAN_FREE_POINTS_THRESHOLD
+
     def decide_next_action(self):
         if self.status == HumanStatus.GETOUT:
             self.think_to_get_out()
@@ -755,9 +793,10 @@ class Human:
             floor.get_tile(self.point) != Tile.DANGER
         ):
 
-            blockade_cands = [self.route[0]]
+            blockade_cand = self.route[0]
 
-            for blockade_cand in blockade_cands:
+            # 置いても humanがfreeなら置く
+            if self.is_free_if_blockade(blockade_cand):
                 # その位置に壁やpartitionがなく、人やペットの制約もなければ、partitionを立てる
                 if (floor.get_tile(blockade_cand) == Tile.EMPTY) and (
                     partition_cands.get_tile(blockade_cand) == Tile.EMPTY
@@ -888,7 +927,7 @@ def main():
                     human.route = deque()
                     human.solve_route_turn = turn
 
-                # turn数に応じてrouteを引き直す
+                # turn数に応じて、もしくはrouteがなければ、routeを引き直す
                 if (human.solve_route_turn <= turn) or (len(human.route) == 0):
                     human.think_route(turn)
 

@@ -528,6 +528,9 @@ class HumanStatus(Enum):
     DEAD = 2
 
 
+HUMAN_FREE_POINTS_THRESHOLD = 50
+
+
 class Human:
     def __init__(
         self,
@@ -737,6 +740,41 @@ class Human:
 
         return directions
 
+    def is_free_if_blockade(self, hypothesis_point):
+        # TODO: free判定をちゃんとやるか、閾値変更
+        can_go_cnt = 0
+        visited = Visited(MARGIN)
+
+        # can_go_cnt を数える
+        def free_dfs(point):
+            nonlocal can_go_cnt
+            if visited.is_visited(point):
+                return None
+            visited.add_one(point)
+
+            can_go_cnt += 1
+            if can_go_cnt >= HUMAN_FREE_POINTS_THRESHOLD:
+                # 閾値を超えたら終了
+                return True
+
+            for neighbour_diff in neighbour_diffs:
+                neighbour = point + neighbour_diff
+
+                # 置く仮定の場所は無いものとする
+                if neighbour == hypothesis_point:
+                    continue
+
+                if floor.get_tile(neighbour) not in [Tile.WALL, Tile.PARTITION]:
+                    check = free_dfs(neighbour)
+                    if check:
+                        return True
+
+        _ = free_dfs(self.point)
+
+        # 行ける場所が多いなら free
+        print(f"# human_id {self.id}, can_go_count {can_go_cnt}")
+        return can_go_cnt >= HUMAN_FREE_POINTS_THRESHOLD
+
     def decide_next_action(self):
         if self.status == HumanStatus.GETOUT:
             self.think_to_get_out()
@@ -759,13 +797,15 @@ class Human:
 
             blockade_cand: Point = self.route[0]
 
-            # その位置に壁やpartitionがなく、人やペットの制約もなければ、partitionを立てる
-            if (floor.get_tile(blockade_cand) == Tile.EMPTY) and (
-                partition_cands.get_tile(blockade_cand) == Tile.EMPTY
-            ):
-                self.next_blockade = blockade_cand
-                floor.update_tile(self.next_blockade, Tile.PARTITION)
-                return
+            # 置いても humanがfreeなら置く
+            if self.is_free_if_blockade(blockade_cand):
+                # その位置に壁やpartitionがなく、人やペットの制約もなければ、partitionを立てる
+                if (floor.get_tile(blockade_cand) == Tile.EMPTY) and (
+                    partition_cands.get_tile(blockade_cand) == Tile.EMPTY
+                ):
+                    self.next_blockade = blockade_cand
+                    floor.update_tile(self.next_blockade, Tile.PARTITION)
+                    return
 
         # 移動先の優先順位付
         directions = self.sort_directions()
