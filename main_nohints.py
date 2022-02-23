@@ -1,6 +1,5 @@
 from enum import Enum
 import random
-import copy
 from collections import deque
 from operator import itemgetter
 
@@ -632,22 +631,19 @@ class Human:
         # humanの solve_turn を過ぎていたら solveし直す
         # routeの次が通行不能になってる場合もsolveし直す
         # Refactor
-        if (self.solve_route_turn <= turn) or (
-            floor.get_tile(self.route[0]) in [Tile.WALL, Tile.PARTITION]
-        ):
-            route = solve_route(self.point, self.target.point, floor)
-            if route is None:
-                self.route = deque()
-            else:
-                self.route = deque(route)
+        route = solve_route(self.point, self.target.point, floor)
+        if route is None:
+            self.route = deque()
+        else:
+            self.route = deque(route)
 
-            route_len = len(self.route)
-            if route_len >= 6:
-                # 遠いならそのルートの半分の長さまではそのままでいく。
-                self.solve_route_turn = turn + route_len // 2
-            else:
-                # 近いなら毎ターンsolveする
-                self.solve_route_turn = turn + 1
+        route_len = len(self.route)
+        if route_len >= 6:
+            # 遠いならそのルートの半分の長さまではそのままでいく。
+            self.solve_route_turn = turn + route_len // 2
+        else:
+            # 近いなら毎ターンsolveする
+            self.solve_route_turn = turn + 1
 
     def think_to_get_out(self):
         route = self.get_route_to_empty()
@@ -877,9 +873,16 @@ def main():
 
             human.set_status()
 
+            # routeがPartitionで埋まってしまったなら、そのrouteを削除する。routeはこのターンに引き直す。
+            if (len(human.route) > 0) and (
+                Tile.PARTITION in [floor.get_tile(p) for p in human.route]
+            ):
+                human.route = deque()
+                human.solve_route_turn = turn
+
             # turn数に応じてrouteを引き直す
-            # Refactor
-            human.think_route(turn)
+            if (human.solve_route_turn <= turn) or (len(human.route) == 0):
+                human.think_route(turn)
 
             human.decide_next_action()
 
