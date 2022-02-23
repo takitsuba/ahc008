@@ -716,7 +716,7 @@ class Human:
             # すでに離れている方向の優先度を上げる
             directions += [self.point - self.target.point] + neighbour_diffs  # type: ignore
 
-        elif 2 <= distance <= 4:
+        elif 2 <= distance <= self.block_dist:
             # 十分近いので待機を優先
             # TODO: targetが捕まっているパターン
             directions += [PointDiff(0, 0)] + neighbour_diffs
