@@ -698,9 +698,8 @@ class Human:
         #"""
 
         directions: List[PointDiff] = []
-        diff_to_target: PointDiff = self.target.point - self.point  # type: ignore
 
-        distance = abs(diff_to_target.x) + abs(diff_to_target.y)
+        distance = len(self.route)
         random.shuffle(neighbour_diffs)
 
         if distance <= 4:
@@ -710,6 +709,7 @@ class Human:
 
         if distance == 0:
             # ランダム
+            # TODO: 最適な場所にすすむ。なお、別に距離0になることはほとんどなさそう。
             directions += neighbour_diffs
 
         elif distance == 1:
