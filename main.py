@@ -757,16 +757,15 @@ class Human:
             floor.get_tile(self.point) != Tile.DANGER
         ):
 
-            blockade_cands: List[Point] = [self.route[0]]
+            blockade_cand: Point = self.route[0]
 
-            for blockade_cand in blockade_cands:
-                # その位置に壁やpartitionがなく、人やペットの制約もなければ、partitionを立てる
-                if (floor.get_tile(blockade_cand) == Tile.EMPTY) and (
-                    partition_cands.get_tile(blockade_cand) == Tile.EMPTY
-                ):
-                    self.next_blockade = blockade_cand
-                    floor.update_tile(self.next_blockade, Tile.PARTITION)
-                    return
+            # その位置に壁やpartitionがなく、人やペットの制約もなければ、partitionを立てる
+            if (floor.get_tile(blockade_cand) == Tile.EMPTY) and (
+                partition_cands.get_tile(blockade_cand) == Tile.EMPTY
+            ):
+                self.next_blockade = blockade_cand
+                floor.update_tile(self.next_blockade, Tile.PARTITION)
+                return
 
         # 移動先の優先順位付
         directions = self.sort_directions()
@@ -890,7 +889,7 @@ def main():
                     human.route = deque()
                     human.solve_route_turn = turn
 
-                # turn数に応じてrouteを引き直す
+                # turn数に応じて、もしくはrouteがなければ、routeを引き直す
                 if (human.solve_route_turn <= turn) or (len(human.route) == 0):
                     human.think_route(turn)
 
