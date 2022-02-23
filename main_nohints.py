@@ -585,9 +585,8 @@ class Human:
                 priority = kind_to_priority[pet.kind]
                 pets_priority_distances.append((pet, priority, distance))
 
-        pets_priority_distances = sorted(
-            pets_priority_distances, key=lambda x: (x[1], x[2])
-        )
+        # priority無効化
+        pets_priority_distances = sorted(pets_priority_distances, key=lambda x: x[2])
 
         # TODO: 全て捕まえた時の挙動
         if len(pets_priority_distances) > 0:
@@ -736,6 +735,62 @@ class Human:
 
         return directions
 
+    def decide_next_action(self):
+        if self.status == HumanStatus.GETOUT:
+            self.think_to_get_out()
+            if len(self.get_out_route) > 0 and (
+                floor.get_tile(self.get_out_route[0])
+                not in [
+                    Tile.WALL,
+                    Tile.PARTITION,
+                ]
+            ):
+                self.next_move = self.get_out_route.popleft()
+                return
+
+        # TODO: 2しか離れてなくても、遠いところに置くことは可能。
+        # DANGERにいるときは置ける場所が唯一の通路のため置いてはいけない。
+        distance_between_human_target = len(self.route)
+        if (3 <= distance_between_human_target <= self.block_dist) and (
+            floor.get_tile(self.point) != Tile.DANGER
+        ):
+
+            blockade_cands = [self.route[0]]
+
+            for blockade_cand in blockade_cands:
+                # その位置に壁やpartitionがなく、人やペットの制約もなければ、partitionを立てる
+                if (floor.get_tile(blockade_cand) == Tile.EMPTY) and (
+                    partition_cands.get_tile(blockade_cand) == Tile.EMPTY
+                ):
+                    self.next_blockade = blockade_cand
+                    floor.update_tile(self.next_blockade, Tile.PARTITION)
+                    return
+
+        # 移動先の優先順位付
+        directions = self.sort_directions()
+
+        for direction in directions:
+            move_to_cand = self.point + direction
+            if floor.get_tile(move_to_cand) in [
+                Tile.WALL,
+                Tile.PARTITION,
+                Tile.DANGER,
+            ]:
+                pass
+            else:
+                self.next_move = move_to_cand
+
+                # 進む先がDANGERなら、元々いるところ(human.point)が唯一の通路だった。そのためそこはNOTPARTITIONにする。
+                # TODO: 意味あるか不明
+                if floor.get_tile(self.next_move) == Tile.DANGER:
+                    floor.update_tile(self.point, Tile.NOTPARTITION)
+
+                break
+
+        # Refactor: routeを参照するタイミングと削除するタイミングが違うのがわかりにくい
+        if (len(self.route) > 0) and (self.next_move == self.route[0]):
+            _ = self.route.popleft()
+
 
 class Team:
     def __init__(self, humans, target=None):
@@ -817,9 +872,8 @@ def main():
             human.refresh()
 
         for human in humans:
-            # 一度決めたらターゲットは当分更新しない。囲い途中だったのに出て行ってしまうため
-            if not human.target:
-                human.select_target(pets)
+
+            human.select_target(pets)
 
             human.set_status()
 
@@ -827,61 +881,7 @@ def main():
             # Refactor
             human.think_route(turn)
 
-            distance_between_human_target = len(human.route)
-
-            if human.status == HumanStatus.GETOUT:
-                human.think_to_get_out()
-                if len(human.get_out_route) > 0 and (
-                    floor.get_tile(human.get_out_route[0])
-                    not in [
-                        Tile.WALL,
-                        Tile.PARTITION,
-                    ]
-                ):
-                    human.next_move = human.get_out_route.popleft()
-
-            # TODO: 2しか離れてなくても、遠いところに置くことは可能。
-            # DANGERにいるときは置ける場所が唯一の通路のため置いてはいけない。
-            elif (3 <= distance_between_human_target <= human.block_dist) and (
-                floor.get_tile(human.point) != Tile.DANGER
-            ):
-
-                blockade_cands = [human.route[0]]
-
-                for blockade_cand in blockade_cands:
-                    # その位置に壁やpartitionがなく、人やペットの制約もなければ、partitionを立てる
-                    if (floor.get_tile(blockade_cand) == Tile.EMPTY) and (
-                        partition_cands.get_tile(blockade_cand) == Tile.EMPTY
-                    ):
-                        human.next_blockade = blockade_cand
-                        floor.update_tile(human.next_blockade, Tile.PARTITION)
-                        break
-
-            else:
-                # 移動先の優先順位付
-                directions = human.sort_directions()
-
-                for direction in directions:
-                    move_to_cand = human.point + direction
-                    if floor.get_tile(move_to_cand) in [
-                        Tile.WALL,
-                        Tile.PARTITION,
-                        Tile.DANGER,
-                    ]:
-                        pass
-                    else:
-                        human.next_move = move_to_cand
-
-                        # 進む先がDANGERなら、元々いるところ(human.point)が唯一の通路だった。そのためそこはNOTPARTITIONにする。
-                        # TODO: 意味あるか不明
-                        if floor.get_tile(human.next_move) == Tile.DANGER:
-                            floor.update_tile(human.point, Tile.NOTPARTITION)
-
-                        break
-
-                # routeを参照するタイミングと削除するタイミングが違うのがわかりにくい
-                if (len(human.route) > 0) and (human.next_move == human.route[0]):
-                    _ = human.route.popleft()
+            human.decide_next_action()
 
             print(f"# {human}")
             action_char = human.next_action_char()
