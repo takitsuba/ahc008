@@ -525,7 +525,8 @@ class Pet:
 class HumanStatus(Enum):
     NORMAL = 0
     GETOUT = 1
-    DEAD = 2
+    NUISANCE = 2
+    DEAD = 3
 
 
 HUMAN_FREE_POINTS_THRESHOLD = 50
@@ -546,6 +547,8 @@ class Human:
         route=None,
         get_out_route=None,
         solve_route_turn=0,
+        nuisance_goal=None,
+        nuisance_route=None,
     ):
         self.id = id
         self.point = point
@@ -559,9 +562,11 @@ class Human:
         self.route = route if route else deque()
         self.get_out_route = get_out_route if get_out_route else deque()
         self.solve_route_turn = solve_route_turn
+        self.nuisance_goal = nuisance_goal
+        self.nuisance_route = nuisance_route if nuisance_route else deque()
 
     def __repr__(self):
-        return f"Human({self.id}, {self.point}, target: {self.target}, status:{self.status}, next_move:{self.next_move}, next_blockade: {self.next_blockade}, route: {self.route})"
+        return f"Human({self.id}, {self.point}, target: {self.target}, status:{self.status}, next_move:{self.next_move}, next_blockade: {self.next_blockade}, route: {self.route}, nuisance: {self.nuisance_route})"
 
     def select_target(self, pets):
         # self.target = self.team.target  # type:ignore
@@ -621,11 +626,22 @@ class Human:
         return "."
 
     def set_status(self):
-        # DANGERにいるなら脱出モード
-        if floor.get_tile(self.point) == Tile.DANGER:
-            self.status = HumanStatus.GETOUT
-        else:
-            self.status = HumanStatus.NORMAL
+        if self.status == HumanStatus.NUISANCE:
+            # 当初のgoalについたならNORMALに戻す
+            if self.point == self.nuisance_goal:
+                self.status = HumanStatus.NORMAL
+
+                # NORMALに戻ったならrouteを引き直す
+                self.solve_route_turn = -1
+                self.route = deque()
+
+        # elseにしてないのは、上でNORMALになる場合があるから
+        if self.status != HumanStatus.NUISANCE:
+            # DANGERにいるなら脱出モード
+            if floor.get_tile(self.point) == Tile.DANGER:
+                self.status = HumanStatus.GETOUT
+            else:
+                self.status = HumanStatus.NORMAL
 
     def refresh(self):
         self.next_blockade = None
@@ -656,6 +672,14 @@ class Human:
         route = self.get_route_to_empty()
         if route:
             self.get_out_route = deque(route)
+        else:
+            # 逃げ出す道がないなら死んでいる
+            self.status = HumanStatus.DEAD
+
+    def think_to_nuisance_route(self):
+        route = solve_route(self.point, self.nuisance_goal, floor)
+        if route:
+            self.nuisance_route = deque(route)
         else:
             # 逃げ出す道がないなら死んでいる
             self.status = HumanStatus.DEAD
@@ -773,7 +797,22 @@ class Human:
         return can_go_cnt >= HUMAN_FREE_POINTS_THRESHOLD
 
     def decide_next_action(self, humans):
+        if self.status == HumanStatus.NUISANCE:
+            # 邪魔なので出ていく
+            # TODO:毎回考える必要あるか？
+            self.think_to_nuisance_route()
+            if len(self.nuisance_route) > 0 and (
+                floor.get_tile(self.nuisance_route[0])
+                not in [
+                    Tile.WALL,
+                    Tile.PARTITION,
+                ]
+            ):
+                self.next_move = self.nuisance_route.popleft()
+                return
+
         if self.status == HumanStatus.GETOUT:
+            # TODO:毎回考える必要あるか？
             self.think_to_get_out()
             if len(self.get_out_route) > 0 and (
                 floor.get_tile(self.get_out_route[0])
@@ -799,12 +838,32 @@ class Human:
                 partition_cands.get_tile(blockade_cand) == Tile.EMPTY
             ):
 
-                # 置いても全humanがfreeなら置く
-                # 時間かかりすぎな可能性
-                if all([human.is_free_if_blockade(blockade_cand) for human in humans]):
-                    self.next_blockade = blockade_cand
-                    floor.update_tile(self.next_blockade, Tile.PARTITION)
-                    return
+                # 置いても自分がfreeなら
+                # TODO: 自分は待機するか
+                if self.is_free_if_blockade(blockade_cand):
+                    # 置いても全humanがfreeなら置く
+                    # CAUTION: 時間かかりすぎな可能性
+                    # 置くとfreeじゃなくなるhumanは邪魔者としてメモする
+                    nuisances: List[Human] = []
+                    for human in humans:
+                        if human.id == self.id:
+                            # 自分はfreeであることを確認済みのため無視
+                            continue
+                        if not human.is_free_if_blockade(blockade_cand):
+                            nuisances.append(human)
+
+                    # 邪魔者がいなければblockadeする
+                    print(f"# nuisances: {nuisances}")
+                    if len(nuisances) == 0:
+                        self.next_blockade = blockade_cand
+                        floor.update_tile(self.next_blockade, Tile.PARTITION)
+                        return
+                    else:
+                        # 邪魔者に自分のところを一旦のgoalとさせる（置こうとしたhumanは置いてもfreeなので最短の安全場所）
+                        for human in nuisances:
+                            human.status = HumanStatus.NUISANCE
+                            human.nuisance_goal = self.point
+                            print(f"# {human} is nuisance!!!")
 
         # 移動先の優先順位付
         directions = self.sort_directions()
@@ -893,6 +952,7 @@ def main():
         human.team = team
 
     for turn in range(TURN_CNT):
+        print(f"# turn: {turn}")
         action_str = ""
         partition_cands.refresh(humans, pets)
 
