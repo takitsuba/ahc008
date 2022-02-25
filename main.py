@@ -298,7 +298,7 @@ def solve_route(start, goal, floor) -> Optional[List[Point]]:  # type: ignore
 
                 # pathが長すぎる場合は囲われていると見なす
                 # TODO: 妥当なやり方
-                threshold = 50
+                threshold = 100
                 if len(route) >= threshold:
                     return None
     return None
@@ -551,7 +551,7 @@ class Pet:
 
     def update_status(self, humans):
         # TODO: free判定をちゃんとやるか、閾値変更
-        THRESHOLD_POINTS = 100
+        THRESHOLD_POINTS = 250
         can_go_cnt = 0
         self.can_go_floor = CanGoFloor(MARGIN)
         humans_count = HumansCount(MARGIN, humans)
@@ -618,7 +618,8 @@ class HumanStatus(Enum):
     DEAD = 3
 
 
-HUMAN_FREE_POINTS_THRESHOLD = 50
+# 大きすぎると、行けるところが少ないと置かなくなる
+HUMAN_FREE_POINTS_THRESHOLD = 100
 
 
 class Human:

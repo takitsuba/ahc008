@@ -26,6 +26,9 @@ class PointDiff:
     def __hash__(self):
         return hash((self.x, self.y))
 
+    def __repr__(self):
+        return f"PointDiff({self.x}, {self.y})"
+
 
 class Point:
     def __init__(self, x, y):
@@ -293,7 +296,7 @@ def solve_route(start, goal, floor):  # type: ignore
 
                 # pathが長すぎる場合は囲われていると見なす
                 # TODO: 妥当なやり方
-                threshold = 50
+                threshold = 100
                 if len(route) >= threshold:
                     return None
     return None
@@ -377,7 +380,7 @@ class HumansCount(Floor):
         return self.counts[row][col]
 
 
-class Visited(Floor):
+class CanGoFloor(Floor):
     def __init__(self, margin):
         self.margin = margin
         self.counts = self.create_zeros()
@@ -395,10 +398,34 @@ class Visited(Floor):
         col = point.y
         self.counts[row][col] += 1
 
+    def write_weight(self, point, weight):
+        row = point.x
+        col = point.y
+        self.counts[row][col] = weight
+
     def is_visited(self, point):
         row = point.x
         col = point.y
         return self.counts[row][col] > 0
+
+
+class FloorForExpect(Floor):
+    def __init__(self, margin):
+        self.margin = margin
+        self.counts = self.create_zeros()
+
+    def create_zeros(self):
+        counts = []
+        square_len = FLOOR_LEN + self.margin * 2
+        for _ in range(square_len):
+            row = [0] * square_len
+            counts.append(row)
+        return counts
+
+    def add(self, point, number):
+        row = point.x
+        col = point.y
+        self.counts[row][col] += number
 
 
 class VisitedSteps(Floor):
@@ -446,6 +473,14 @@ kind_to_block_dist = {
     Kind.CAT: 4,
 }
 
+kind_to_action_cnt = {
+    Kind.COW: 1,
+    Kind.PIG: 2,
+    Kind.RABBIT: 3,
+    Kind.DOG: 2,
+    Kind.CAT: 2,
+}
+
 
 class PetStatus(Enum):
     NORMAL = 0
@@ -453,11 +488,23 @@ class PetStatus(Enum):
 
 
 class Pet:
-    def __init__(self, id, kind, point, status=PetStatus.NORMAL):
+    def __init__(
+        self,
+        id,
+        kind,
+        point,
+        expected_dir=None,
+        status=PetStatus.NORMAL,
+        can_go_floor=None,
+    ):
         self.id = id
         self.kind = kind
+        self.action_cnt = kind_to_action_cnt[kind]
         self.point = point
+        self.expected_dir = expected_dir if expected_dir else point  # 初期値は現在地を入れる
+        self.expected_route = []
         self.status = status
+        self.can_go_floor = can_go_floor
 
     def move(self, action_char):
         diff = move_char_to_diff[action_char]
@@ -476,22 +523,46 @@ class Pet:
     def __repr__(self):
         return f"Pet({self.id}, {self.kind}, {self.point}, {self.status})"
 
+    # 最新のpartitionを把握したいため、humanごとに実行したい
+    # 4^n 回計算必要なのはきついか？→最大4^6＝4096としてみるか
+    # def update_expected_point(self, rest_action):
+    #     floor_for_expect = FloorForExpect(MARGIN)
+
+    #     def recur(point, rest_action, prob):
+    #         if rest_action == 0:
+    #             floor_for_expect.add(point, prob)
+    #             return
+
+    #         can_go_neighbours = []
+    #         for neighbour_diff in neighbour_diffs:
+    #             neighbour = point + neighbour_diff
+    #             if floor.get_tile(neighbour) not in [Tile.WALL, Tile.PARTITION]:
+    #                 can_go_neighbours.append(neighbour)
+
+    #         prob /= len(can_go_neighbours)
+
+    #         for can_go in can_go_neighbours:
+    #             recur(can_go, rest_action-1, prob)
+
+    #     rest_action
+    #     recur(self.point, rest_action)
+
     def update_status(self, humans):
         # TODO: free判定をちゃんとやるか、閾値変更
-        THRESHOLD_POINTS = 100
+        THRESHOLD_POINTS = 250
         can_go_cnt = 0
-        visited = Visited(MARGIN)
+        self.can_go_floor = CanGoFloor(MARGIN)
         humans_count = HumansCount(MARGIN, humans)
 
         # can_go_cnt を数える
         # 下記の再帰が終わったタイミングで can_go_cnt が THRESHOLD未満で、
         # humanもその範囲にいないなら is_catched
         # humanがいるなら free。 can_go_cntがTHRESHOLD以上なら free。
-        def free_dfs(point):
+        def free_dfs(point, weight):
             nonlocal can_go_cnt
-            if visited.is_visited(point):
+            if self.can_go_floor.is_visited(point):
                 return None
-            visited.add_one(point)
+            self.can_go_floor.write_weight(point, weight)
 
             # TODO: 人間も一緒に閉じ込められてしまった場合
             if humans_count.get_cnt(point) > 0:
@@ -505,16 +576,34 @@ class Pet:
             for neighbour_diff in neighbour_diffs:
                 neighbour = point + neighbour_diff
                 if floor.get_tile(neighbour) not in [Tile.WALL, Tile.PARTITION]:
-                    check = free_dfs(neighbour)
+                    check = free_dfs(neighbour, weight * 0.5)
                     if check:
                         return True
 
-        check = free_dfs(self.point)
+        initial_weight = 1
+        check = free_dfs(self.point, initial_weight)
         if check is not True:
             # checkはNoneのことがある。その場合はFalse
             self.status = PetStatus.DEAD
 
         print(f"# {self.__repr__()}, can_go_count: {can_go_cnt}, check: {check}")
+
+    def update_expected_dir(self):
+        mean_x = 0
+        mean_y = 0
+
+        tile_len = len(self.can_go_floor.counts)
+        for row in range(tile_len):
+            for col in range(tile_len):
+                weight = self.can_go_floor.counts[row][col]
+                if weight > 0:
+                    mean_x += row * weight
+                    mean_y += col * weight
+
+        self.expected_dir = Point(round(mean_x), round(mean_y))
+
+    def update_expected_route(self):
+        self.expected_route = solve_route(self.point, self.expected_dir, floor)
 
     def is_free(self):
         return self.status == PetStatus.NORMAL
@@ -527,7 +616,8 @@ class HumanStatus(Enum):
     DEAD = 3
 
 
-HUMAN_FREE_POINTS_THRESHOLD = 50
+# 大きすぎると、行けるところが少ないと置かなくなる
+HUMAN_FREE_POINTS_THRESHOLD = 100
 
 
 class Human:
@@ -762,7 +852,7 @@ class Human:
     def is_free_if_blockade(self, hypothesis_point):
         # TODO: free判定をちゃんとやるか、閾値変更
         can_go_cnt = 0
-        visited = Visited(MARGIN)
+        visited = CanGoFloor(MARGIN)
 
         # can_go_cnt を数える
         def free_dfs(point):
