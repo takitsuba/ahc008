@@ -397,10 +397,34 @@ class CanGoFloor(Floor):
         col = point.y
         self.counts[row][col] += 1
 
+    def write_weight(self, point: Point, weight: float):
+        row = point.x
+        col = point.y
+        self.counts[row][col] = weight
+
     def is_visited(self, point: Point) -> bool:
         row = point.x
         col = point.y
         return self.counts[row][col] > 0
+
+
+class FloorForExpect(Floor):
+    def __init__(self, margin):
+        self.margin: int = margin
+        self.counts: List[List[int]] = self.create_zeros()
+
+    def create_zeros(self):
+        counts = []
+        square_len = FLOOR_LEN + self.margin * 2
+        for _ in range(square_len):
+            row = [0] * square_len
+            counts.append(row)
+        return counts
+
+    def add(self, point: Point, number):
+        row = point.x
+        col = point.y
+        self.counts[row][col] += number
 
 
 class VisitedSteps(Floor):
@@ -448,6 +472,14 @@ kind_to_block_dist = {
     Kind.CAT: 4,
 }
 
+kind_to_action_cnt = {
+    Kind.COW: 1,
+    Kind.PIG: 2,
+    Kind.RABBIT: 3,
+    Kind.DOG: 2,
+    Kind.CAT: 2,
+}
+
 
 class PetStatus(Enum):
     NORMAL = 0
@@ -455,11 +487,22 @@ class PetStatus(Enum):
 
 
 class Pet:
-    def __init__(self, id, kind, point, status=PetStatus.NORMAL):
+    def __init__(
+        self,
+        id,
+        kind,
+        point,
+        expected_point=None,
+        status=PetStatus.NORMAL,
+        can_go_floor=None,
+    ):
         self.id = id
         self.kind = kind
+        self.action_cnt = kind_to_action_cnt[kind]
         self.point = point
+        self.expected_point = expected_point if expected_point else point  # 初期値は現在地を入れる
         self.status = status
+        self.can_go_floor = can_go_floor
 
     def move(self, action_char):
         diff = move_char_to_diff[action_char]
@@ -478,22 +521,42 @@ class Pet:
     def __repr__(self):
         return f"Pet({self.id}, {self.kind}, {self.point}, {self.status})"
 
+    # # 最新のpartitionを把握したいため、毎turnごとに実行したい
+    # def update_expected_point(self):
+    #     floor_for_expect = FloorForExpect(MARGIN)
+
+    #     def recur(point, rest_action, prob):
+    #         if rest_action == 0:
+    #             can_go_neighbours =
+    #             return
+
+    #         can_go_neighbours = []
+    #         for neighbour_diff in neighbour_diffs:
+    #             neighbour = point + neighbour_diff
+    #             if floor.get_tile(neighbour) not in [Tile.WALL, Tile.PARTITION]:
+    #                 can_go_neighbours.append(neighbour)
+
+    #         prob /= len(can_go_neighbours)
+
+    #         for can_go in can_go_neighbours:
+    # floor_for_expect.add(can_go, prob)
+
     def update_status(self, humans):
         # TODO: free判定をちゃんとやるか、閾値変更
         THRESHOLD_POINTS = 100
         can_go_cnt = 0
-        can_go_floor = CanGoFloor(MARGIN)
+        self.can_go_floor = CanGoFloor(MARGIN)
         humans_count = HumansCount(MARGIN, humans)
 
         # can_go_cnt を数える
         # 下記の再帰が終わったタイミングで can_go_cnt が THRESHOLD未満で、
         # humanもその範囲にいないなら is_catched
         # humanがいるなら free。 can_go_cntがTHRESHOLD以上なら free。
-        def free_dfs(point):
+        def free_dfs(point, weight):
             nonlocal can_go_cnt
-            if can_go_floor.is_visited(point):
+            if self.can_go_floor.is_visited(point):
                 return None
-            can_go_floor.add_one(point)
+            self.can_go_floor.write_weight(point, weight)
 
             # TODO: 人間も一緒に閉じ込められてしまった場合
             if humans_count.get_cnt(point) > 0:
@@ -507,16 +570,19 @@ class Pet:
             for neighbour_diff in neighbour_diffs:
                 neighbour = point + neighbour_diff
                 if floor.get_tile(neighbour) not in [Tile.WALL, Tile.PARTITION]:
-                    check = free_dfs(neighbour)
+                    check = free_dfs(neighbour, weight * 0.5)
                     if check:
                         return True
 
-        check = free_dfs(self.point)
+        initial_weight = 1
+        check = free_dfs(self.point, initial_weight)
         if check is not True:
             # checkはNoneのことがある。その場合はFalse
             self.status = PetStatus.DEAD
 
         print(f"# {self.__repr__()}, can_go_count: {can_go_cnt}, check: {check}")
+
+    # def update_exected_point(self):
 
     def is_free(self) -> bool:
         return self.status == PetStatus.NORMAL
