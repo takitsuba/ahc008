@@ -27,11 +27,11 @@ def test_once(params):
 
 
 def local_test(test_cnt, file_id, disable_tqdm, no_hints, process):
-    if file_id:
-        params_list = [(format(file_id, "0>4"), no_hints)]
+    if file_id is None:
+        params_list = [(format(i, "0>4"), no_hints) for i in range(test_cnt)]
 
     else:
-        params_list = [(format(i, "0>4"), no_hints) for i in range(test_cnt)]
+        params_list = [(format(file_id, "0>4"), no_hints)]
 
     with Pool(processes=process) as p:
         results = list(
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     test_cnt = int(args.count)
-    file_id = int(args.id) if args.id else None
+    file_id = int(args.id) if args.id.isdigit() else None
     disable_tqdm = args.disable_tqdm
     no_hints = args.no_hints
     process = int(args.process)
