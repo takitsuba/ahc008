@@ -68,7 +68,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     test_cnt = int(args.count)
-    file_id = int(args.id) if args.id.isdigit() else None
+    file_id = int(args.id) if (args.id is not None) and args.id.isdigit() else None
     disable_tqdm = args.disable_tqdm
     no_hints = args.no_hints
     process = int(args.process)
