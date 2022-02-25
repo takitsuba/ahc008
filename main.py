@@ -28,6 +28,9 @@ class PointDiff:
     def __hash__(self):
         return hash((self.x, self.y))
 
+    def __repr__(self):
+        return f"PointDiff({self.x}, {self.y})"
+
 
 class Point:
     def __init__(self, x, y):
@@ -81,7 +84,7 @@ def cal_distance_points(p1: Point, p2: Point):
     return abs(p1.x - p2.x) + abs(p1.y - p2.y)
 
 
-def cal_distance(animal1: Human, animal2: Human):
+def cal_distance(animal1: Union[Human, Pet], animal2: Union[Human, Pet]):
     return cal_distance_points(animal1.point, animal2.point)
 
 
@@ -492,7 +495,7 @@ class Pet:
         id,
         kind,
         point,
-        expected_point=None,
+        expected_dir=None,
         status=PetStatus.NORMAL,
         can_go_floor=None,
     ):
@@ -500,7 +503,8 @@ class Pet:
         self.kind = kind
         self.action_cnt = kind_to_action_cnt[kind]
         self.point = point
-        self.expected_point = expected_point if expected_point else point  # 初期値は現在地を入れる
+        self.expected_dir = expected_dir if expected_dir else point  # 初期値は現在地を入れる
+        self.expected_route: Optional[List[Point]] = []
         self.status = status
         self.can_go_floor = can_go_floor
 
@@ -521,13 +525,14 @@ class Pet:
     def __repr__(self):
         return f"Pet({self.id}, {self.kind}, {self.point}, {self.status})"
 
-    # # 最新のpartitionを把握したいため、毎turnごとに実行したい
-    # def update_expected_point(self):
+    # 最新のpartitionを把握したいため、humanごとに実行したい
+    # 4^n 回計算必要なのはきついか？→最大4^6＝4096としてみるか
+    # def update_expected_point(self, rest_action):
     #     floor_for_expect = FloorForExpect(MARGIN)
 
     #     def recur(point, rest_action, prob):
     #         if rest_action == 0:
-    #             can_go_neighbours =
+    #             floor_for_expect.add(point, prob)
     #             return
 
     #         can_go_neighbours = []
@@ -539,7 +544,10 @@ class Pet:
     #         prob /= len(can_go_neighbours)
 
     #         for can_go in can_go_neighbours:
-    # floor_for_expect.add(can_go, prob)
+    #             recur(can_go, rest_action-1, prob)
+
+    #     rest_action
+    #     recur(self.point, rest_action)
 
     def update_status(self, humans):
         # TODO: free判定をちゃんとやるか、閾値変更
@@ -582,7 +590,22 @@ class Pet:
 
         print(f"# {self.__repr__()}, can_go_count: {can_go_cnt}, check: {check}")
 
-    # def update_exected_point(self):
+    def update_expected_dir(self):
+        mean_x = 0
+        mean_y = 0
+
+        tile_len = len(self.can_go_floor.counts)
+        for row in range(tile_len):
+            for col in range(tile_len):
+                weight = self.can_go_floor.counts[row][col]
+                if weight > 0:
+                    mean_x += row * weight
+                    mean_y += col * weight
+
+        self.expected_dir = Point(round(mean_x), round(mean_y))
+
+    def update_expected_route(self):
+        self.expected_route = solve_route(self.point, self.expected_dir, floor)
 
     def is_free(self) -> bool:
         return self.status == PetStatus.NORMAL
