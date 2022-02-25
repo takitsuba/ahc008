@@ -480,7 +480,7 @@ class Pet:
 
     def update_status(self, humans):
         # TODO: free判定をちゃんとやるか、閾値変更
-        THRESHOLD_POINTS = 50
+        THRESHOLD_POINTS = 100
         can_go_cnt = 0
         visited = Visited(MARGIN)
         humans_count = HumansCount(MARGIN, humans)
@@ -747,7 +747,6 @@ class Human:
 
         elif 2 <= distance <= self.block_dist:
             # 十分近いので待機を優先
-            # TODO: targetが捕まっているパターン
             directions += [PointDiff(0, 0)] + neighbour_diffs
         else:
             # 4より大きい場合
