@@ -379,7 +379,7 @@ class HumansCount(Floor):
         return self.counts[row][col]
 
 
-class Visited(Floor):
+class CanGoFloor(Floor):
     def __init__(self, margin):
         self.margin: int = margin
         self.counts: List[List[int]] = self.create_zeros()
@@ -482,7 +482,7 @@ class Pet:
         # TODO: free判定をちゃんとやるか、閾値変更
         THRESHOLD_POINTS = 100
         can_go_cnt = 0
-        visited = Visited(MARGIN)
+        can_go_floor = CanGoFloor(MARGIN)
         humans_count = HumansCount(MARGIN, humans)
 
         # can_go_cnt を数える
@@ -491,9 +491,9 @@ class Pet:
         # humanがいるなら free。 can_go_cntがTHRESHOLD以上なら free。
         def free_dfs(point):
             nonlocal can_go_cnt
-            if visited.is_visited(point):
+            if can_go_floor.is_visited(point):
                 return None
-            visited.add_one(point)
+            can_go_floor.add_one(point)
 
             # TODO: 人間も一緒に閉じ込められてしまった場合
             if humans_count.get_cnt(point) > 0:
@@ -764,7 +764,7 @@ class Human:
     def is_free_if_blockade(self, hypothesis_point):
         # TODO: free判定をちゃんとやるか、閾値変更
         can_go_cnt = 0
-        visited = Visited(MARGIN)
+        visited = CanGoFloor(MARGIN)
 
         # can_go_cnt を数える
         def free_dfs(point):
