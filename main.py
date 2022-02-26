@@ -301,7 +301,7 @@ def solve_route(start, goal, floor) -> Optional[List[Point]]:  # type: ignore
 
                 # pathが長すぎる場合は囲われていると見なす
                 # TODO: 妥当なやり方
-                threshold = 250
+                threshold = 50
                 if len(route) >= threshold:
                     return None
     return None
