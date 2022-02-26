@@ -98,6 +98,7 @@ class Tile(Enum):
     PARTITION = 2
     NOTPARTITION = 3
     DANGER = 4
+    NUISANCE_GOAL = 5
 
     def __str__(self):
         return str(self.value)
@@ -719,7 +720,10 @@ class Human:
         if self.status == HumanStatus.NUISANCE:
             # 当初のgoalについたならNORMALに戻す
             if self.point == self.nuisance_goal:
+                floor.update_tile(self.nuisance_goal, Tile.EMPTY)
                 self.status = HumanStatus.NORMAL
+                self.nuisance_goal = None
+                self.nuisance_route = deque()
 
                 # NORMALに戻ったならrouteを引き直す
                 self.solve_route_turn = -1
@@ -821,7 +825,7 @@ class Human:
         distance = len(self.route)
         random.shuffle(neighbour_diffs)
 
-        if distance <= 4:
+        if distance <= self.block_dist:
             self.route = deque()
             # 次のturnにrouteを算出する
             self.solve_route_turn = -1
@@ -952,6 +956,8 @@ class Human:
                         for human in nuisances:
                             human.status = HumanStatus.NUISANCE
                             human.nuisance_goal = self.point
+                            human.nuisance_route = deque()
+                            floor.update_tile(self.point, Tile.NUISANCE_GOAL)
                             print(f"# {human} is nuisance!!!")
 
         # 移動先の優先順位付
