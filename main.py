@@ -720,7 +720,10 @@ class Human:
         if self.status == HumanStatus.NUISANCE:
             # 当初のgoalについたならNORMALに戻す
             if self.point == self.nuisance_goal:
+                floor.update_tile(self.nuisance_goal, Tile.EMPTY)
                 self.status = HumanStatus.NORMAL
+                self.nuisance_goal = None
+                self.nuisance_route = deque()
 
                 # NORMALに戻ったならrouteを引き直す
                 self.solve_route_turn = -1
