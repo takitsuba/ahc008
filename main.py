@@ -709,7 +709,13 @@ class Human:
             partition_cands.update_tile(self.next_move, Tile.NOTPARTITION)
 
             next_diff = self.next_move - self.point
-            move_char = move_actions_table[next_diff]
+
+            try:
+                move_char = move_actions_table[next_diff]
+            except KeyError:
+                print(f"# KeyError: {self.next_move} - {self.point}, human: {self}")
+                # 本来なるはずがないがよくなる。REにしないために何かしら返す
+                move_char = "."
 
             return move_char
 
