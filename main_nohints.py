@@ -96,6 +96,7 @@ class Tile(Enum):
     PARTITION = 2
     NOTPARTITION = 3
     DANGER = 4
+    NUISANCE_GOAL = 5
 
     def __str__(self):
         return str(self.value)
@@ -762,14 +763,17 @@ class Human:
             self.get_out_route = deque(route)
         else:
             # 逃げ出す道がないなら死んでいる
+            print(f"# Died by get_out: {self}")
             self.status = HumanStatus.DEAD
 
     def think_to_nuisance_route(self):
         route = solve_route(self.point, self.nuisance_goal, floor)
+        print(f"# nuisance_route: {self.point}, {self.nuisance_goal}, {route}")
         if route:
             self.nuisance_route = deque(route)
         else:
             # 逃げ出す道がないなら死んでいる
+            print(f"# Died by nuisance: {self}")
             self.status = HumanStatus.DEAD
 
     def get_route_to_empty(self):  # type: ignore
@@ -819,7 +823,8 @@ class Human:
         distance = len(self.route)
         random.shuffle(neighbour_diffs)
 
-        if distance <= 4:
+        if distance <= self.block_dist:
+            # self.block_dist離れている時はランダムに動くためrouteがずれる可能性がある。
             self.route = deque()
             # 次のturnにrouteを算出する
             self.solve_route_turn = -1
@@ -835,7 +840,7 @@ class Human:
 
         elif 2 <= distance <= self.block_dist:
             # 十分近いので待機を優先
-            directions += [PointDiff(0, 0)] + neighbour_diffs
+            directions += neighbour_diffs
         else:
             # 4より大きい場合
             # 近づく
@@ -921,6 +926,7 @@ class Human:
             blockade_cand = self.route[0]
 
             # その位置に壁やpartitionがなく、人やペットの制約もなければ、partitionを立てる
+            # TODO: dangerなら置いても良くないか？
             if (floor.get_tile(blockade_cand) == Tile.EMPTY) and (
                 partition_cands.get_tile(blockade_cand) == Tile.EMPTY
             ):
@@ -950,7 +956,11 @@ class Human:
                         for human in nuisances:
                             human.status = HumanStatus.NUISANCE
                             human.nuisance_goal = self.point
-                            print(f"# {human} is nuisance!!!")
+                            human.nuisance_route = deque()
+                            print(f"# {self} said '{human} is nuisance!!!'")
+
+                            # 該当場所をnuisance_goalにする
+                            floor.update_tile(self.point, Tile.NUISANCE_GOAL)
 
         # 移動先の優先順位付
         directions = self.sort_directions()
@@ -1080,6 +1090,8 @@ def main():
                     human.think_route(turn)
 
                 human.decide_next_action(humans)
+
+                print(f"#{human}")
                 action_char = human.next_action_char()
 
                 print(f"# {human}")
