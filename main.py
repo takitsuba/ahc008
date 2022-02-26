@@ -289,6 +289,8 @@ def solve_route(start, goal, floor) -> Optional[List[Point]]:  # type: ignore
         if now == goal:
             return visited.get_route(now)
 
+        # shuffleしないと、特定の方向ばかり優先される可能性
+        random.shuffle(neighbour_diffs)
         for diff in neighbour_diffs:
             neighbour = now + diff
 
