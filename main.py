@@ -774,7 +774,8 @@ class Human:
             self.get_out_route = deque(route)
         else:
             # 逃げ出す道がないなら死んでいる
-            self.status = HumanStatus.DEAD
+            # self.status = HumanStatus.DEAD
+            pass
 
     def think_to_nuisance_route(self):
         route = solve_route(self.point, self.nuisance_goal, floor)
@@ -782,7 +783,8 @@ class Human:
             self.nuisance_route = deque(route)
         else:
             # 逃げ出す道がないなら死んでいる
-            self.status = HumanStatus.DEAD
+            # self.status = HumanStatus.DEAD
+            pass
 
     def get_route_to_empty(self) -> Optional[List[Point]]:  # type: ignore
         """EMPTYまでの経路のpointをリストで返す
