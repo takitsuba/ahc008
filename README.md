@@ -7,4 +7,4 @@ This contains
   - `tools` are created by AtCoder and downloaded from [here](https://atcoder.jp/contests/ahc008/tasks/ahc008_a).
 
 # Result
-[](https://user-images.githubusercontent.com/11292872/155967124-3fd0604c-ea3f-4537-bc1d-d8dad64f8c1b.gif)
+![](https://user-images.githubusercontent.com/11292872/155967124-3fd0604c-ea3f-4537-bc1d-d8dad64f8c1b.gif)
